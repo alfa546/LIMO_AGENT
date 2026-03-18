@@ -1011,7 +1011,7 @@
     window.scrollTo(0, 0);
   }
 
-  function handleLogin() {
+  async function handleLogin() {
     const email = document.getElementById('login-email').value;
     const pass = document.getElementById('login-password').value;
     if (!email || !pass) { showToast('Please fill all fields', 'error'); return; }
@@ -1020,19 +1020,30 @@
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner" style="display:inline-block;margin:auto;"></div>';
 
-    setTimeout(() => {
-      currentUser = { name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1), email };
-      document.getElementById('dash-name').textContent = currentUser.name;
-      document.getElementById('nav-username').textContent = currentUser.name;
-      document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
-      btn.disabled = false;
-      btn.innerHTML = 'Sign In';
-      showToast('Welcome back, ' + currentUser.name + '! 👋', 'success');
-      showPage('dashboard');
-    }, 1200);
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: pass })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail);
+
+        currentUser = data.user;
+        document.getElementById('dash-name').textContent = currentUser.name;
+        document.getElementById('nav-username').textContent = currentUser.name;
+        document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+        showToast('Welcome back, ' + currentUser.name + '! 👋', 'success');
+        showPage('dashboard');
+    } catch(err) {
+        showToast(err.message || 'Login failed', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Sign In';
+    }
   }
 
-  function handleRegister() {
+  async function handleRegister() {
     const name = document.getElementById('reg-name').value;
     const email = document.getElementById('reg-email').value;
     const pass = document.getElementById('reg-password').value;
@@ -1043,16 +1054,27 @@
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner" style="display:inline-block;margin:auto;"></div>';
 
-    setTimeout(() => {
-      currentUser = { name, email };
-      document.getElementById('dash-name').textContent = name.split(' ')[0];
-      document.getElementById('nav-username').textContent = name.split(' ')[0];
-      document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
-      btn.disabled = false;
-      btn.innerHTML = 'Create Account';
-      showToast('Account created! Welcome, ' + name.split(' ')[0] + '! 🎉', 'success');
-      showPage('dashboard');
-    }, 1200);
+    try {
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password: pass })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail);
+
+        currentUser = data.user;
+        document.getElementById('dash-name').textContent = currentUser.name;
+        document.getElementById('nav-username').textContent = currentUser.name;
+        document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+        showToast('Account created! Welcome ' + name.split(' ')[0] + '! 🎉', 'success');
+        showPage('dashboard');
+    } catch(err) {
+        showToast(err.message || 'Registration failed', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Create Account';
+    }
   }
 
   function logout() {
@@ -1122,7 +1144,7 @@
     document.getElementById('connected-count').textContent = count;
   }
 
-  function joinMeeting() {
+  async function joinMeeting() {
     const link = document.getElementById('meeting-link').value.trim();
     if (!link) { showToast('Please paste a meeting link first', 'error'); return; }
 
@@ -1130,12 +1152,21 @@
     btn.textContent = 'Joining...';
     btn.disabled = true;
 
-    setTimeout(() => {
-      btn.textContent = 'Join & Record';
-      btn.disabled = false;
-      document.getElementById('meeting-link').value = '';
-      showToast('🤖 Bot is joining the meeting and recording...', 'success');
-    }, 1500);
+    try {
+        const res = await fetch('/api/meeting/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ link })
+        });
+        const data = await res.json();
+        showToast('🤖 Bot is joining the meeting!', 'success');
+        document.getElementById('meeting-link').value = '';
+    } catch(err) {
+        showToast('Failed to join meeting', 'error');
+    } finally {
+        btn.textContent = 'Join & Record';
+        btn.disabled = false;
+    }
   }
 
   function switchTab(tab) {
