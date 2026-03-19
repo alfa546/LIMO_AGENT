@@ -4,6 +4,10 @@ from fastapi.requests import Request
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from db.models import init_db, SessionLocal, User, Platform, Meeting
+from authlib.integrations.starlette_client import OAuth
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.responses import RedirectResponse
+import httpx
 import hashlib
 import json
 import os
@@ -20,6 +24,19 @@ load_dotenv()
 
 app = FastAPI(title="MeetingAgent API")
 templates = Jinja2Templates(directory="web/templates")
+
+# Session middleware
+app.add_middleware(SessionMiddleware, secret_key="meetingagent-secret-key-2024")
+
+# Google OAuth setup
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile https://www.googleapis.com/auth/calendar.readonly'}
+)
 
 # ===== Startup =====
 @app.on_event("startup")
@@ -199,6 +216,53 @@ async def get_meetings(email: str):
         "summary": m.summary,
         "created_at": str(m.created_at)
     } for m in meetings]
+
+@app.get("/auth/google")
+async def google_login(request: Request):
+    redirect_uri = str(request.base_url) + "auth/google/callback"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user_info = token.get('userinfo')
+        
+        # Token save karo database mein
+        db = SessionLocal()
+        existing = db.query(Platform).filter(
+            Platform.user_email == user_info['email'],
+            Platform.platform == 'google'
+        ).first()
+        
+        if existing:
+            existing.connected = True
+            existing.credentials = json.dumps({
+                'access_token': token.get('access_token'),
+                'email': user_info['email'],
+                'name': user_info['name']
+            })
+        else:
+            new_platform = Platform(
+                user_email=user_info['email'],
+                platform='google',
+                connected=True,
+                credentials=json.dumps({
+                    'access_token': token.get('access_token'),
+                    'email': user_info['email'],
+                    'name': user_info['name']
+                })
+            )
+            db.add(new_platform)
+        db.commit()
+        db.close()
+        
+        # Frontend pe redirect karo
+        return RedirectResponse(url=f"/#google_connected=true&email={user_info['email']}&name={user_info['name']}")
+        
+    except Exception as e:
+        print(f"OAuth error: {e}")
+        return RedirectResponse(url="/#google_error=true")
 
 @app.get("/api/health")
 async def health():
