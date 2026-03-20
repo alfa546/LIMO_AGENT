@@ -28,7 +28,6 @@ decorator==5.2.1
 defusedxml==0.7.1
 discord.py==2.7.1
 distro==1.9.0
-ecdsa==0.19.1
 executing==2.2.1
 fastapi==0.135.1
 fastjsonschema==2.21.2
@@ -112,7 +111,6 @@ Pygments==2.19.2
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
-python-jose==3.5.0
 python-json-logger==4.0.0
 PyYAML==6.0.3
 pyzmq==27.1.0
@@ -123,7 +121,6 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rfc3987-syntax==1.1.0
 rpds-py==0.29.0
-rsa==4.9.1
 Send2Trash==1.8.3
 setuptools==80.9.0
 six==1.17.0

@@ -1001,7 +1001,7 @@
   function showPage(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-' + page).classList.add('active');
-    if (page === 'dashboard') {
+    if (page === 'dashboard' || page === 'meeting') {
       document.getElementById('nav-public').style.display = 'none';
       document.getElementById('nav-private').style.display = 'flex';
     } else {
@@ -1221,43 +1221,17 @@
     const link = document.getElementById('meeting-link').value.trim();
     if (!link) { showToast('Please paste a meeting link first', 'error'); return; }
     
-    // Step 1 — Naam poochho
-    const botName = prompt('Your name (will show in meeting):', currentUser ? currentUser.name : '');
-    if (!botName) return;
-    
-    // Step 2 — Gmail poochho
-    const botEmail = prompt('Your Gmail address:', currentUser ? currentUser.email : '');
-    if (!botEmail) return;
-    
-    // Step 3 — Password poochho
-    const botPassword = prompt('Your Gmail password (used only to join meeting, not stored):');
-    if (!botPassword) return;
-
     const btn = document.querySelector('.btn-join');
-    btn.textContent = 'Joining...';
+    btn.textContent = 'Opening...';
     btn.disabled = true;
 
     try {
-        const res = await fetch('/api/meeting/join', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                link,
-                user_email: currentUser ? currentUser.email : 'guest@meetingagent.com',
-                bot_name: botName,
-                bot_email: botEmail,
-                bot_password: botPassword
-            })
-        });
-        
-        if (res.ok) {
-            showToast('🤖 ' + botName + ' joining meeting...', 'success');
-            document.getElementById('meeting-link').value = '';
-            setTimeout(loadMeetings, 2000);
-        }
-    } catch(err) {
-        showToast('🤖 Joining meeting...', 'success');
+        closeModal();
+        openMeetingRoom(link);
+        showToast('📹 Opening meeting room...', 'success');
         document.getElementById('meeting-link').value = '';
+    } catch(err) {
+        showToast('Failed to open meeting', 'error');
     } finally {
         btn.textContent = 'Join & Record';
         btn.disabled = false;
@@ -1281,6 +1255,252 @@
   document.getElementById('connect-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
+
+  // ===== MEETING ROOM =====
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let recordingBlob = null;
+  let isRecording = false;
+  let transcriptInterval = null;
+  let fullTranscript = '';
+
+  function openMeetingRoom(link) {
+      let meetLink = link;
+      if (!meetLink.startsWith('http')) {
+          meetLink = 'https://' + meetLink;
+      }
+      
+      document.getElementById('meet-iframe').src = meetLink;
+      document.getElementById('meet-placeholder').style.display = 'none';
+      document.getElementById('meeting-room-title').textContent = meetLink.split('/').pop();
+      
+      showPage('meeting');
+  }
+
+  function leaveMeeting() {
+      if (isRecording) toggleRecording();
+      
+      document.getElementById('meet-iframe').src = '';
+      document.getElementById('meet-placeholder').style.display = 'flex';
+      
+      showPage('dashboard');
+  }
+
+  async function toggleRecording() {
+      if (!isRecording) {
+          try {
+              const stream = await navigator.mediaDevices.getUserMedia({ 
+                  audio: true,
+                  video: false
+              });
+              
+              mediaRecorder = new MediaRecorder(stream);
+              audioChunks = [];
+              fullTranscript = '';
+              
+              mediaRecorder.ondataavailable = (e) => {
+                  audioChunks.push(e.data);
+              };
+              
+              mediaRecorder.start(5000);
+              isRecording = true;
+              
+              document.getElementById('btn-record').textContent = '⏹️ Stop Recording';
+              document.getElementById('btn-record').style.background = '#374151';
+              document.getElementById('rec-indicator').style.display = 'flex';
+              document.getElementById('transcript-content').innerHTML = '<div style="color:var(--muted);font-size:12px;margin-bottom:12px;">Recording started...</div>';
+              
+              transcriptInterval = setInterval(updateTranscript, 30000);
+              
+              showToast('🎙️ Recording started!', 'success');
+              
+          } catch(err) {
+              showToast('Microphone access denied!', 'error');
+          }
+      } else {
+          mediaRecorder.stop();
+          isRecording = false;
+          clearInterval(transcriptInterval);
+          
+          mediaRecorder.onstop = async () => {
+              recordingBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              
+              document.getElementById('btn-record').textContent = '🎙️ Start Recording';
+              document.getElementById('btn-record').style.background = '#ef4444';
+              document.getElementById('rec-indicator').style.display = 'none';
+              document.getElementById('btn-summary').style.display = 'block';
+              
+              await updateTranscript();
+              showToast('Recording saved! Click "Get Summary"', 'success');
+          };
+      }
+  }
+
+  async function updateTranscript() {
+      if (audioChunks.length === 0) return;
+      
+      try {
+          const blob = new Blob(audioChunks, { type: 'audio/webm' });
+          const formData = new FormData();
+          formData.append('audio', blob, 'recording.webm');
+          
+          const res = await fetch('/api/transcribe', {
+              method: 'POST',
+              body: formData
+          });
+          
+          const data = await res.json();
+          if (data.transcript) {
+              fullTranscript = data.transcript;
+              document.getElementById('transcript-content').innerHTML = 
+                  `<div style="font-size:13px;line-height:1.8;color:var(--color-text-secondary);">${fullTranscript}</div>`;
+          }
+      } catch(err) {
+          console.log('Transcript error:', err);
+      }
+  }
+
+  async function generateSummary() {
+      if (!fullTranscript && audioChunks.length === 0) {
+          showToast('No recording found!', 'error');
+          return;
+      }
+      
+      document.getElementById('summary-content').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">⏳ Generating summary...</div>';
+      switchPanel('summary');
+      
+      try {
+          const res = await fetch('/api/summarize', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transcript: fullTranscript })
+          });
+          
+          const data = await res.json();
+          
+          document.getElementById('summary-content').innerHTML = 
+              `<div style="font-size:13px;line-height:1.8;white-space:pre-wrap;">${data.summary}</div>`;
+          document.getElementById('summary-actions').style.display = 'flex';
+          
+          showToast('✨ Summary ready!', 'success');
+          
+      } catch(err) {
+          showToast('Summary failed!', 'error');
+      }
+  }
+
+  function downloadSummary() {
+      const summary = document.getElementById('summary-content').textContent;
+      const blob = new Blob([summary], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'meeting-summary.txt';
+      a.click();
+  }
+
+  function downloadAudio() {
+      if (!recordingBlob) return;
+      const url = URL.createObjectURL(recordingBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'meeting-recording.webm';
+      a.click();
+  }
+
+  function switchPanel(panel) {
+      document.getElementById('panel-transcript').style.display = panel === 'transcript' ? 'flex' : 'none';
+      document.getElementById('panel-summary').style.display = panel === 'summary' ? 'flex' : 'none';
+      document.getElementById('tab-transcript').style.borderBottomColor = panel === 'transcript' ? 'var(--accent)' : 'transparent';
+      document.getElementById('tab-transcript').style.color = panel === 'transcript' ? 'var(--color-text-primary)' : 'var(--muted)';
+      document.getElementById('tab-summary').style.borderBottomColor = panel === 'summary' ? 'var(--accent)' : 'transparent';
+      document.getElementById('tab-summary').style.color = panel === 'summary' ? 'var(--color-text-primary)' : 'var(--muted)';
+  }
 </script>
+
+<!-- MEETING ROOM PAGE -->
+<div class="page" id="page-meeting">
+  <div style="display:flex;flex-direction:column;height:100vh;padding-top:64px;">
+    
+    <!-- Top Bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--surface);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button onclick="leaveMeeting()" class="btn-ghost" style="padding:8px 12px;">← Leave</button>
+        <span id="meeting-room-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;">Meeting Room</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="rec-indicator" style="display:none;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;background:rgba(239,68,68,0.1);color:#ef4444;font-size:13px;font-weight:500;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:badgePulse 1s ease infinite;"></div>
+          Recording
+        </div>
+        <button id="btn-record" onclick="toggleRecording()" style="padding:10px 20px;border-radius:10px;border:none;background:#ef4444;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">
+          🎙️ Start Recording
+        </button>
+        <button id="btn-summary" onclick="generateSummary()" style="padding:10px 20px;border-radius:10px;border:none;background:var(--accent);color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;display:none;">
+          ✨ Get Summary
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div style="display:flex;flex:1;overflow:hidden;">
+      
+      <!-- Google Meet Embed -->
+      <div style="flex:1;position:relative;background:#000;">
+        <iframe 
+          id="meet-iframe"
+          src=""
+          allow="camera;microphone;fullscreen;display-capture;autoplay"
+          style="width:100%;height:100%;border:none;">
+        </iframe>
+        <div id="meet-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface);">
+          <div style="font-size:48px;margin-bottom:16px;">📹</div>
+          <p style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;">Meeting will appear here</p>
+          <p style="color:var(--muted);font-size:14px;">Paste a Google Meet link and click Join</p>
+        </div>
+      </div>
+
+      <!-- Right Panel — Transcript -->
+      <div style="width:360px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);">
+        
+        <!-- Tabs -->
+        <div style="display:flex;border-bottom:1px solid var(--border);">
+          <button onclick="switchPanel('transcript')" id="tab-transcript" style="flex:1;padding:12px;border:none;background:transparent;color:var(--color-text-primary);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid var(--accent);">
+            📝 Live Transcript
+          </button>
+          <button onclick="switchPanel('summary')" id="tab-summary" style="flex:1;padding:12px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;">
+            ✨ Summary
+          </button>
+        </div>
+
+        <!-- Transcript Panel -->
+        <div id="panel-transcript" style="flex:1;overflow-y:auto;padding:16px;display:flex;">
+          <div id="transcript-content" style="font-size:13px;color:var(--color-text-secondary);line-height:1.8;width:100%;">
+            <div style="text-align:center;color:var(--muted);margin-top:40px;">
+              <div style="font-size:32px;margin-bottom:8px;">🎙️</div>
+              <p>Start recording to see live transcript</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Panel -->
+        <div id="panel-summary" style="flex:1;overflow-y:auto;padding:16px;display:none;flex-direction:column;">
+          <div id="summary-content" style="font-size:13px;color:var(--color-text-secondary);line-height:1.8;">
+            <div style="text-align:center;color:var(--muted);margin-top:40px;">
+              <div style="font-size:32px;margin-bottom:8px;">✨</div>
+              <p>Summary will appear here after recording</p>
+            </div>
+          </div>
+          <div id="summary-actions" style="display:none;margin-top:16px;flex-direction:column;gap:8px;">
+            <button onclick="downloadSummary()" class="btn-ghost" style="width:100%;padding:10px;">📄 Download Summary</button>
+            <button onclick="downloadAudio()" class="btn-ghost" style="width:100%;padding:10px;">🎵 Download Recording</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

@@ -58,6 +58,12 @@ class MeetingJoin(BaseModel):
     user_email: str = "guest@meetingagent.com"
     bot_name: str = "Meeting Bot"
     bot_email: str = ""
+
+class TranscribeRequest(BaseModel):
+    audio: bytes = None
+
+class SummarizeRequest(BaseModel):
+    transcript: str
     bot_password: str = ""
 
 class PlatformConnect(BaseModel):
@@ -263,6 +269,37 @@ async def google_callback(request: Request):
     except Exception as e:
         print(f"OAuth error: {e}")
         return RedirectResponse(url="/#google_error=true")
+
+# ===== TRANSCRIBE & SUMMARIZE ROUTES =====
+from fastapi import UploadFile, File
+import tempfile
+import os
+
+@app.post("/api/transcribe")
+async def transcribe_audio_api(audio: UploadFile = File(...)):
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+            content = await audio.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        from bot.transcriber import transcribe_audio
+        transcript = transcribe_audio(tmp_path)
+        
+        os.unlink(tmp_path)
+        
+        return {"transcript": transcript}
+    except Exception as e:
+        return {"transcript": "", "error": str(e)}
+
+@app.post("/api/summarize")
+async def summarize_api(data: dict):
+    try:
+        from agent.summarizer import summarize_transcript
+        result = summarize_transcript(data.get('transcript', ''))
+        return {"summary": result['summary']}
+    except Exception as e:
+        return {"summary": "", "error": str(e)}
 
 @app.get("/api/health")
 async def health():
