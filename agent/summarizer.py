@@ -11,8 +11,17 @@ def summarize_transcript(transcript: str) -> dict:
     print("Summarizing transcript...")
 
     prompt = f"""
-You are a meeting assistant. Analyze this meeting transcript and provide:
+You are a meeting assistant. Analyze this meeting transcript and provide a summary.
 
+LANGUAGE RULES - Follow strictly:
+- If transcript is in English only -> respond in English
+- If transcript is in Urdu only -> respond in Roman Urdu (Urdu written in English letters, NOT Urdu script)
+- If transcript is mixed Urdu/English -> respond in Roman Urdu
+- NEVER use Urdu script characters
+- NEVER use Arabic script
+- Roman Urdu example: "Is meeting mein discuss hua ke project deadline extend hogi"
+
+Provide:
 1. **Meeting Summary** (3-4 lines)
 2. **Key Points** (bullet points)
 3. **Action Items** (who needs to do what)
@@ -20,8 +29,6 @@ You are a meeting assistant. Analyze this meeting transcript and provide:
 
 Transcript:
 {transcript}
-
-Always respond in Roman Urdu (Urdu written in English letters). For example: "Is meeting 
 """
 
     response = client.chat.completions.create(

@@ -1287,9 +1287,9 @@
   async function toggleRecording() {
       if (!isRecording) {
           try {
-              const stream = await navigator.mediaDevices.getUserMedia({ 
+          const stream = await navigator.mediaDevices.getDisplayMedia({ 
                   audio: true,
-                  video: false
+            video: true
               });
               
               mediaRecorder = new MediaRecorder(stream);
