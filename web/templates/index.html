@@ -1,1835 +1,929 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EagleBrains — AI Meeting Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #edf2f8;
-    --surface: #ffffff;
-    --surface2: #e6edf7;
-    --border: rgba(27, 56, 94, 0.12);
-    --border-hover: rgba(27, 56, 94, 0.28);
-    --text: #0e223d;
-    --muted: #5a728f;
-    --accent: #0a66cc;
-    --accent2: #1384ff;
-    --accent-glow: rgba(10, 102, 204, 0.24);
-    --highlight: #11b4a7;
-    --color-text-primary: #0e223d;
-    --color-text-secondary: #4f6784;
-    --green: #22c55e;
-    --red: #ef4444;
-    --discord: #5865f2;
-    --zoom: #2d8cff;
-    --meet: #34a853;
-    --teams: #6264a7;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'Manrope', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-    background-image:
-      radial-gradient(circle at 12% 12%, rgba(10,102,204,0.2), transparent 35%),
-      radial-gradient(circle at 88% 10%, rgba(17,180,167,0.18), transparent 38%),
-      radial-gradient(circle at 40% 100%, rgba(19,132,255,0.16), transparent 48%);
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(14,34,61,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(14,34,61,0.02) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .orb {
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(140px);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .orb1 { width: 560px; height: 560px; background: rgba(10,102,204,0.14); top: -170px; right: -190px; }
-  .orb2 { width: 460px; height: 460px; background: rgba(17,180,167,0.12); bottom: -130px; left: -120px; }
-
-  nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 40px;
-    height: 64px;
-    background: rgba(237,242,248,0.86);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .logo {
-    font-family: 'Outfit', sans-serif;
-    font-weight: 800;
-    font-size: 20px;
-    color: var(--text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-  }
-
-  .logo-mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 10px;
-    background: linear-gradient(145deg, var(--accent), #0d4f99);
-    box-shadow: 0 10px 18px rgba(10, 102, 204, 0.32);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .logo-mark::before {
-    content: 'E';
-    position: absolute;
-    inset: 0;
-    color: #fff;
-    font-size: 18px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transform: translateX(-2px);
-    font-family: 'Outfit', sans-serif;
-  }
-
-  .logo-mark::after {
-    content: '';
-    position: absolute;
-    right: -8px;
-    top: -12px;
-    width: 24px;
-    height: 40px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
-    transform: rotate(20deg);
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.8); }
-  }
-
-  .nav-links { display: flex; align-items: center; gap: 8px; }
-
-  .btn-ghost {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.65);
-    color: var(--muted);
-    font-family: 'Manrope', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); background: #fff; }
-
-  .btn-primary {
-    padding: 8px 20px;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-family: 'Manrope', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-block;
-    box-shadow: 0 0 20px var(--accent-glow);
-  }
-  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 28px var(--accent-glow); }
-
-  .page { display: none; min-height: 100vh; position: relative; z-index: 1; }
-  .page.active { display: flex; }
-
-  #page-landing {
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 120px 40px 90px;
-  }
-
-  .hero-shell {
-    width: 100%;
-    max-width: 1140px;
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 26px;
-    align-items: stretch;
-    margin-bottom: 24px;
-  }
-
-  .hero-panel {
-    background: linear-gradient(170deg, rgba(255,255,255,0.92), rgba(255,255,255,0.76));
-    border: 1px solid rgba(27,56,94,0.12);
-    border-radius: 26px;
-    padding: 42px;
-    box-shadow: 0 20px 62px rgba(18,41,70,0.12);
-    backdrop-filter: blur(10px);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .hero-panel::before {
-    content: '';
-    position: absolute;
-    inset: auto -120px -120px auto;
-    width: 280px;
-    height: 280px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(19,132,255,0.25), transparent 70%);
-    pointer-events: none;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 100px;
-    border: 1px solid rgba(10,102,204,0.25);
-    background: rgba(19,132,255,0.1);
-    font-size: 12px;
-    color: #0b5ebd;
-    font-weight: 500;
-    margin-bottom: 26px;
-    animation: fadeUp 0.6s ease both;
-  }
-
-  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--highlight); box-shadow: 0 0 6px var(--highlight); }
-
-  h1 {
-    font-family: 'Outfit', sans-serif;
-    font-size: clamp(48px, 7vw, 88px);
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: -2px;
-    margin-bottom: 18px;
-    animation: fadeUp 0.6s ease 0.1s both;
-  }
-
-  h1 .accent {
-    background: linear-gradient(130deg, #0a66cc, #11b4a7);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  h1 .dim { color: #6b7d93; }
-
-  .hero-sub {
-    font-size: 18px;
-    color: var(--muted);
-    max-width: 560px;
-    line-height: 1.6;
-    margin-bottom: 34px;
-    animation: fadeUp 0.6s ease 0.2s both;
-  }
-
-  .hero-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-start;
-    margin-bottom: 0;
-    animation: fadeUp 0.6s ease 0.3s both;
-  }
-
-  .btn-large {
-    padding: 14px 32px;
-    font-size: 16px;
-    border-radius: 12px;
-  }
-
-  .hero-right {
-    animation: fadeUp 0.6s ease 0.25s both;
-  }
-
-  .insight-card {
-    height: 100%;
-    min-height: 420px;
-    border-radius: 26px;
-    border: 1px solid rgba(27,56,94,0.12);
-    background: linear-gradient(145deg, rgba(10,102,204,0.22), rgba(17,180,167,0.14)), #fff;
-    padding: 30px;
-    box-shadow: 0 20px 60px rgba(17,38,70,0.14);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    position: relative;
-    overflow: hidden;
-    animation: floatCard 6s ease-in-out infinite;
-  }
-
-  .insight-card::after {
-    content: '';
-    position: absolute;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    right: -70px;
-    top: -80px;
-    background: rgba(255,255,255,0.46);
-  }
-
-  .insight-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-    position: relative;
-    z-index: 2;
-  }
-
-  .insight-pill {
-    padding: 7px 12px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: #0b4f9f;
-    background: rgba(255,255,255,0.72);
-  }
-
-  .insight-score {
-    font-family: 'Outfit', sans-serif;
-    font-size: 30px;
-    font-weight: 800;
-    color: #17324d;
-  }
-
-  .insight-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    position: relative;
-    z-index: 2;
-  }
-
-  .insight-item {
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.76);
-    border: 1px solid rgba(19,32,51,0.08);
-    font-size: 13px;
-    color: #224062;
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .insight-item strong {
-    color: #132033;
-    font-weight: 700;
-  }
-
-  .hero-ticker {
-    max-width: 1140px;
-    width: 100%;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.8);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 18px;
-  }
-
-  .ticker-track {
-    display: flex;
-    gap: 30px;
-    padding: 10px 16px;
-    white-space: nowrap;
-    animation: ticker 20s linear infinite;
-    color: #275180;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .ticker-track span { opacity: 0.88; }
-
-  .platforms {
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    max-width: 1140px;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    animation: fadeUp 0.6s ease 0.4s both;
-    margin-bottom: 28px;
-  }
-
-  .platform-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.82);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text);
-  }
-
-  .platform-icon { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
-
-  .features {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    max-width: 1140px;
-    width: 100%;
-    animation: fadeUp 0.6s ease 0.45s both;
-  }
-
-  .feature-card {
-    padding: 24px;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.86);
-    text-align: left;
-    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-  .feature-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(19,32,51,0.08); }
-
-  .feature-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(140deg, rgba(19,132,255,0.12), transparent 55%);
-    opacity: 0;
-    transition: opacity 0.25s ease;
-  }
-
-  .feature-card:hover::before { opacity: 1; }
-
-  .feature-icon {
-    width: 40px; height: 40px;
-    border-radius: 10px;
-    background: rgba(11,122,117,0.14);
-    border: 1px solid rgba(11,122,117,0.26);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    margin-bottom: 16px;
-  }
-
-  .feature-card h3 { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 8px; }
-  .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-  .workflow-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    max-width: 1140px;
-    width: 100%;
-    margin-top: 16px;
-    animation: fadeUp 0.6s ease 0.5s both;
-  }
-
-  .workflow-step {
-    background: rgba(255,255,255,0.86);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-  }
-
-  .workflow-step .num {
-    font-family: 'Outfit', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--accent);
-    margin-bottom: 6px;
-  }
-
-  .workflow-step h4 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 14px;
-    margin-bottom: 6px;
-  }
-
-  .workflow-step p {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-
-  .auth-page {
-    align-items: center;
-    justify-content: center;
-    padding: 100px 20px;
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 420px;
-    background: rgba(255,255,255,0.92);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px;
-    animation: fadeUp 0.4s ease both;
-  }
-
-  .auth-card h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 6px;
-  }
-
-  .auth-card .subtitle {
-    color: var(--muted);
-    font-size: 14px;
-    margin-bottom: 32px;
-  }
-
-  .form-group { margin-bottom: 16px; }
-
-  label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-
-  input[type="text"], input[type="email"], input[type="password"] {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.75);
-    color: var(--text);
-    font-family: 'Manrope', sans-serif;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-
-  .btn-full {
-    width: 100%;
-    padding: 13px;
-    border-radius: 10px;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-family: 'Manrope', sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 8px;
-    box-shadow: 0 0 20px var(--accent-glow);
-  }
-  .btn-full:hover { background: var(--accent2); transform: translateY(-1px); }
-
-  .auth-switch {
-    text-align: center;
-    margin-top: 24px;
-    font-size: 13px;
-    color: var(--muted);
-  }
-
-  .auth-switch a {
-    color: var(--accent2);
-    text-decoration: none;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .auth-switch a:hover { text-decoration: underline; }
-
-  .divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 24px 0;
-  }
-  .divider-line { flex: 1; height: 1px; background: var(--border); }
-  .divider span { font-size: 12px; color: var(--muted); }
-
-  #page-dashboard {
-    flex-direction: column;
-    padding-top: 64px;
-  }
-
-  .dashboard-layout {
-    display: flex;
-    flex: 1;
-    min-height: calc(100vh - 64px);
-  }
-
-  .sidebar {
-    width: 240px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    padding: 24px 16px;
-    background: rgba(255,255,255,0.88);
-  }
-
-  .sidebar-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    padding: 0 12px;
-    margin-bottom: 8px;
-    margin-top: 20px;
-  }
-  .sidebar-label:first-child { margin-top: 0; }
-
-  .sidebar-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-bottom: 2px;
-    border: 1px solid transparent;
-  }
-  .sidebar-item:hover { color: var(--text); background: var(--surface2); }
-  .sidebar-item.active { color: var(--text); background: var(--surface2); border-color: var(--border); }
-  .sidebar-item .si-icon { font-size: 16px; }
-
-  .main-content {
-    flex: 1;
-    padding: 40px;
-    overflow-y: auto;
-  }
-
-  .page-header { margin-bottom: 32px; }
-  .page-header h2 { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 4px; }
-  .page-header p { color: var(--muted); font-size: 14px; }
-
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-
-  .stat-card {
-    padding: 20px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.84);
-    transition: border-color 0.2s;
-  }
-  .stat-card:hover { border-color: var(--border-hover); }
-  .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-  .stat-value { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 700; }
-  .stat-change { font-size: 12px; color: var(--green); margin-top: 4px; }
-
-  .connect-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-
-  .connect-card {
-    padding: 24px;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.84);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  .connect-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
-  .connect-card.connected { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); }
-
-  .connect-logo {
-    width: 48px; height: 48px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-  }
-
-  .connect-info { flex: 1; }
-  .connect-name { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 3px; }
-  .connect-desc { font-size: 12px; color: var(--muted); }
-
-  .connect-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 5px 12px;
-    border-radius: 100px;
-  }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
-  .status-connected { background: rgba(34,197,94,0.15); color: var(--green); }
-  .status-connected .status-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .status-disconnected { background: var(--surface2); color: var(--muted); }
-  .status-disconnected .status-dot { background: var(--muted); }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .section-header h3 { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; }
-
-  .meeting-list { display: flex; flex-direction: column; gap: 10px; }
-
-  .meeting-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px 20px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.84);
-    transition: border-color 0.2s;
-    cursor: pointer;
-  }
-  .meeting-item:hover { border-color: var(--border-hover); }
-
-  .meeting-platform {
-    width: 36px; height: 36px;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-  }
-
-  .meeting-info { flex: 1; }
-  .meeting-title { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
-  .meeting-meta { font-size: 12px; color: var(--muted); }
-
-  .meeting-badge {
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 100px;
-    font-weight: 500;
-  }
-  .badge-done { background: rgba(34,197,94,0.1); color: var(--green); }
-  .badge-live { background: rgba(239,68,68,0.1); color: var(--red); animation: badgePulse 1.5s ease infinite; }
-
-  @keyframes badgePulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
-
-  .quick-join {
-    padding: 24px;
-    border-radius: 16px;
-    border: 1px solid rgba(11,122,117,0.24);
-    background: rgba(14,165,160,0.08);
-    margin-bottom: 32px;
-  }
-
-  .quick-join h3 { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 16px; }
-
-  .join-input-row {
-    display: flex;
-    gap: 10px;
-  }
-
-  .join-input-row input {
-    flex: 1;
-    padding: 12px 16px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.7);
-    color: var(--text);
-    font-family: 'Manrope', sans-serif;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .join-input-row input:focus { border-color: var(--accent); }
-  .join-input-row input::placeholder { color: var(--muted); }
-
-  .btn-join {
-    padding: 12px 24px;
-    border-radius: 10px;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-family: 'Manrope', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .btn-join:hover { background: var(--accent2); }
-
-  .toast {
-    position: fixed;
-    bottom: 32px;
-    right: 32px;
-    padding: 14px 20px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.95);
-    border: 1px solid var(--border);
-    font-size: 14px;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transform: translateY(80px);
-    opacity: 0;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 14px 40px rgba(25,37,56,0.18);
-  }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.success { border-color: rgba(34,197,94,0.3); }
-  .toast.error { border-color: rgba(239,68,68,0.3); }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes floatCard {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-
-  @keyframes ticker {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
-
-  .reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
-  }
-
-  .reveal.show {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .user-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--highlight));
-    color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    display: none;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(18,30,46,0.45);
-    backdrop-filter: blur(8px);
-    z-index: 200;
-    display: none;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.show { display: flex; }
-
-  .modal {
-    background: rgba(255,255,255,0.94);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px;
-    max-width: 440px;
-    width: 90%;
-    animation: fadeUp 0.3s ease both;
-  }
-  .modal h3 { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  .modal p { color: var(--muted); font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
-  .modal-actions { display: flex; gap: 10px; }
-  .modal-actions .btn-full { margin-top: 0; }
-
-  @media (max-width: 768px) {
-    .hero-shell { grid-template-columns: 1fr; }
-    .hero-panel { padding: 28px 24px; }
-    .hero-actions { flex-direction: column; align-items: stretch; }
-    .insight-card { min-height: auto; }
-    .platforms { justify-content: center; }
-    .features { grid-template-columns: 1fr; }
-    .workflow-grid { grid-template-columns: 1fr 1fr; }
-    .stats-row { grid-template-columns: repeat(2, 1fr); }
-    .connect-grid { grid-template-columns: 1fr; }
-    .sidebar { display: none; }
-    nav { padding: 0 20px; }
-    h1 { font-size: 40px; }
-  }
-
-  @media (max-width: 520px) {
-    .workflow-grid { grid-template-columns: 1fr; }
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EagleBrain - AI Meeting Control Center</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Inter', 'ui-sans-serif', 'system-ui']
+          },
+          keyframes: {
+            drift: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-8px)' }
+            },
+            reveal: {
+              '0%': { opacity: 0, transform: 'translateY(14px)' },
+              '100%': { opacity: 1, transform: 'translateY(0px)' }
+            },
+            pulseSoft: {
+              '0%, 100%': { opacity: 0.32 },
+              '50%': { opacity: 0.68 }
+            }
+          },
+          animation: {
+            drift: 'drift 6s ease-in-out infinite',
+            reveal: 'reveal .55s ease both',
+            pulseSoft: 'pulseSoft 2.2s ease-in-out infinite'
+          },
+          boxShadow: {
+            panel: '0 0 0 1px rgba(148,163,184,.14), 0 18px 45px rgba(2,6,23,.55), 0 0 34px rgba(16,185,129,.10)'
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background:
+        radial-gradient(1000px 450px at 8% 0%, rgba(16, 185, 129, 0.14), transparent 60%),
+        radial-gradient(900px 420px at 92% 10%, rgba(14, 165, 233, 0.13), transparent 62%),
+        radial-gradient(700px 350px at 50% 100%, rgba(30, 41, 59, 0.46), transparent 72%),
+        #020617;
+    }
+
+    .glass {
+      background: rgba(15, 23, 42, 0.58);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .card-hover {
+      transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-4px);
+      border-color: rgba(52, 211, 153, 0.5);
+      box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.22), 0 16px 36px rgba(2, 6, 23, 0.65);
+    }
+
+    .tight {
+      letter-spacing: -0.03em;
+    }
+
+    .hidden-page {
+      display: none;
+    }
+
+    .show-page {
+      display: block;
+    }
+  </style>
 </head>
-<body>
-
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
-
-<!-- NAVBAR -->
-<nav>
-  <a class="logo" href="#" onclick="showPage('landing')">
-    <div class="logo-mark"></div>
-    EagleBrains
-  </a>
-  <div class="nav-links" id="nav-public">
-    <a class="btn-ghost" href="#" onclick="showPage('login')">Sign In</a>
-    <a class="btn-primary" href="#" onclick="showPage('register')">Get Started</a>
-  </div>
-  <div class="nav-links" id="nav-private" style="display:none;">
-    <span style="font-size:13px;color:var(--muted);margin-right:8px;" id="nav-username"></span>
-    <div class="user-avatar" id="user-avatar" onclick="logout()">N</div>
-  </div>
-</nav>
-
-<!-- ===== LANDING PAGE ===== -->
-<div class="page active" id="page-landing">
-  <div class="hero-shell">
-    <div class="hero-panel reveal">
-      <div class="badge"><div class="badge-dot"></div> AI-Powered Meeting Intelligence</div>
-      <h1>Never Miss a<br><span class="accent">Meeting Insight</span><br><span class="dim">Again.</span></h1>
-      <p class="hero-sub">EagleBrains automatically joins your meetings, transcribes everything, and delivers clear decisions, action items, and summaries across all your collaboration platforms.</p>
-      <div class="hero-actions">
-        <button class="btn-primary btn-large" onclick="showPage('register')">Start for Free →</button>
-        <button class="btn-ghost btn-large" onclick="showPage('login')">Sign In</button>
-      </div>
-    </div>
-    <div class="hero-right reveal">
-      <div class="insight-card">
-        <div class="insight-top">
-          <span class="insight-pill">LIVE AI BRIEF</span>
-          <span class="insight-score">92%</span>
-        </div>
-        <div class="insight-list">
-          <div class="insight-item"><strong>Decision:</strong> Launch onboarding v2 on Monday</div>
-          <div class="insight-item"><strong>Owner:</strong> Areeba to finalize copy by 4 PM</div>
-          <div class="insight-item"><strong>Risk:</strong> API budget needs approval this sprint</div>
-          <div class="insight-item"><strong>Action Items:</strong> 7 tasks auto-assigned</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="hero-ticker reveal">
-    <div class="ticker-track">
-      <span>Auto Join Agents</span>
-      <span>Live Transcription</span>
-      <span>Speaker Detection</span>
-      <span>Action Item Tracking</span>
-      <span>Smart Summaries</span>
-      <span>Cross Platform Sync</span>
-      <span>Auto Join Agents</span>
-      <span>Live Transcription</span>
-      <span>Speaker Detection</span>
-      <span>Action Item Tracking</span>
-      <span>Smart Summaries</span>
-      <span>Cross Platform Sync</span>
-    </div>
-  </div>
-
-  <div class="platforms reveal">
-    <div class="platform-badge"><div class="platform-icon" style="background:#5865f2;">💬</div> Discord</div>
-    <div class="platform-badge"><div class="platform-icon" style="background:#34a853;">📹</div> Google Meet</div>
-    <div class="platform-badge"><div class="platform-icon" style="background:#2d8cff;">🔵</div> Zoom</div>
-    <div class="platform-badge"><div class="platform-icon" style="background:#6264a7;">🟦</div> MS Teams</div>
-  </div>
-  <div class="features reveal">
-    <div class="feature-card reveal">
-      <div class="feature-icon">🤖</div>
-      <h3>Autonomous Join</h3>
-      <p>Paste a link and EagleBrains joins instantly with a production-safe meeting bot workflow.</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon">🎙️</div>
-      <h3>Live Transcription</h3>
-      <p>Capture every voice with low-latency transcripts optimized for fast teams and async updates.</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon">✨</div>
-      <h3>Smart Intelligence</h3>
-      <p>Get structured summaries, owners, deadlines, and risks instantly after each call.</p>
-    </div>
-  </div>
-
-  <div class="workflow-grid reveal">
-    <div class="workflow-step reveal">
-      <div class="num">01</div>
-      <h4>Connect Workspace</h4>
-      <p>Link Discord, Meet, Zoom, and Teams in one control layer.</p>
-    </div>
-    <div class="workflow-step reveal">
-      <div class="num">02</div>
-      <h4>Deploy Agent</h4>
-      <p>Your meeting bot enters sessions and starts capturing context.</p>
-    </div>
-    <div class="workflow-step reveal">
-      <div class="num">03</div>
-      <h4>Track Signals</h4>
-      <p>Important updates, blockers, and decisions are extracted in real time.</p>
-    </div>
-    <div class="workflow-step reveal">
-      <div class="num">04</div>
-      <h4>Share Outcome</h4>
-      <p>Action-ready summary is delivered to your dashboard and channels.</p>
-    </div>
-  </div>
-</div>
-
-<!-- ===== LOGIN PAGE ===== -->
-<div class="page auth-page" id="page-login">
-  <div class="auth-card">
-    <h2>Welcome back</h2>
-    <p class="subtitle">Sign in to your EagleBrains account</p>
-
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="you@example.com">
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="••••••••">
-    </div>
-
-    <button class="btn-full" onclick="handleLogin()">
-      <span id="login-text">Sign In</span>
-      <div class="spinner" id="login-spinner"></div>
-    </button>
-
-    <div class="auth-switch">
-      Don't have an account? <a onclick="showPage('register')">Create one</a>
-    </div>
-  </div>
-</div>
-
-<!-- ===== REGISTER PAGE ===== -->
-<div class="page auth-page" id="page-register">
-  <div class="auth-card">
-    <h2>Create account</h2>
-    <p class="subtitle">Start automating your meetings today — it's free</p>
-
-    <div class="form-group">
-      <label>Full Name</label>
-      <input type="text" id="reg-name" placeholder="Nouman Ahmed">
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="reg-email" placeholder="you@example.com">
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="reg-password" placeholder="Min. 8 characters">
-    </div>
-
-    <button class="btn-full" onclick="handleRegister()">
-      <span id="reg-text">Create Account</span>
-      <div class="spinner" id="reg-spinner"></div>
-    </button>
-
-    <div class="auth-switch">
-      Already have an account? <a onclick="showPage('login')">Sign in</a>
-    </div>
-  </div>
-</div>
-
-<!-- ===== DASHBOARD ===== -->
-<div class="page" id="page-dashboard">
-  <div class="dashboard-layout">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="sidebar-label">Main</div>
-      <div class="sidebar-item active" onclick="switchTab('overview')">
-        <span class="si-icon">📊</span> Overview
-      </div>
-      <div class="sidebar-item" onclick="switchTab('meetings')">
-        <span class="si-icon">📅</span> Meetings
-      </div>
-      <div class="sidebar-item" onclick="switchTab('summaries')">
-        <span class="si-icon">📝</span> Summaries
-      </div>
-
-      <div class="sidebar-label">Connections</div>
-      <div class="sidebar-item" onclick="showConnectModal('discord')">
-        <span class="si-icon">💬</span> Discord
-        <span id="sb-discord" style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;"></span>
-      </div>
-      <div class="sidebar-item" onclick="showConnectModal('meet')">
-        <span class="si-icon">📹</span> Google Meet
-        <span id="sb-meet" style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;"></span>
-      </div>
-      <div class="sidebar-item" onclick="showConnectModal('zoom')">
-        <span class="si-icon">🔵</span> Zoom
-        <span id="sb-zoom" style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;"></span>
-      </div>
-      <div class="sidebar-item" onclick="showConnectModal('teams')">
-        <span class="si-icon">🟦</span> Teams
-        <span id="sb-teams" style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;"></span>
-      </div>
-
-      <div class="sidebar-label">Account</div>
-      <div class="sidebar-item" onclick="logout()">
-        <span class="si-icon">🚪</span> Sign Out
-      </div>
-    </div>
-
-    <!-- Main -->
-    <div class="main-content">
-      <div class="page-header">
-        <h2>Good day, <span id="dash-name">Nouman</span> 👋</h2>
-        <p>Your EagleBrains AI meeting agent is ready to work.</p>
-      </div>
-
-      <!-- Stats -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Total Meetings</div>
-          <div class="stat-value">24</div>
-          <div class="stat-change">↑ 3 this week</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Hours Saved</div>
-          <div class="stat-value">18h</div>
-          <div class="stat-change">↑ 2h this week</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Summaries</div>
-          <div class="stat-value">24</div>
-          <div class="stat-change">100% automated</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Connected Apps</div>
-          <div class="stat-value" id="connected-count">0</div>
-          <div class="stat-change" style="color:var(--muted);">of 4 platforms</div>
-        </div>
-      </div>
-
-      <!-- Quick Join -->
-      <div class="quick-join">
-        <h3>⚡ Quick Join Meeting</h3>
-        <div class="join-input-row">
-          <input type="text" id="meeting-link" placeholder="Paste meeting link — meet.google.com/... or zoom.us/j/...">
-          <button class="btn-join" onclick="joinMeeting()">Join & Record</button>
-        </div>
-      </div>
-
-      <!-- Connect Platforms -->
-      <div class="section-header">
-        <h3>Connected Platforms</h3>
-        <span style="font-size:12px;color:var(--muted);">Click to connect</span>
-      </div>
-      <div class="connect-grid" style="margin-bottom:32px;">
-        <div class="connect-card" id="card-discord" onclick="showConnectModal('discord')">
-          <div class="connect-logo" style="background:rgba(88,101,242,0.15);">💬</div>
-          <div class="connect-info">
-            <div class="connect-name">Discord</div>
-            <div class="connect-desc">Bot joins voice channels, sends summaries to DM</div>
-          </div>
-          <div class="connect-status status-disconnected" id="status-discord">
-            <div class="status-dot"></div> Connect
-          </div>
-        </div>
-        <div class="connect-card" id="card-meet" onclick="showConnectModal('meet')">
-          <div class="connect-logo" style="background:rgba(52,168,83,0.15);">📹</div>
-          <div class="connect-info">
-            <div class="connect-name">Google Meet</div>
-            <div class="connect-desc">Auto-join scheduled and instant meetings</div>
-          </div>
-          <div class="connect-status status-disconnected" id="status-meet">
-            <div class="status-dot"></div> Connect
-          </div>
-        </div>
-        <div class="connect-card" id="card-zoom" onclick="showConnectModal('zoom')">
-          <div class="connect-logo" style="background:rgba(45,140,255,0.15);">🔵</div>
-          <div class="connect-info">
-            <div class="connect-name">Zoom</div>
-            <div class="connect-desc">Join Zoom meetings automatically via bot</div>
-          </div>
-          <div class="connect-status status-disconnected" id="status-zoom">
-            <div class="status-dot"></div> Connect
-          </div>
-        </div>
-        <div class="connect-card" id="card-teams" onclick="showConnectModal('teams')">
-          <div class="connect-logo" style="background:rgba(98,100,167,0.15);">🟦</div>
-          <div class="connect-info">
-            <div class="connect-name">Microsoft Teams</div>
-            <div class="connect-desc">Connect via Microsoft Graph API</div>
-          </div>
-          <div class="connect-status status-disconnected" id="status-teams">
-            <div class="status-dot"></div> Connect
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Meetings -->
-      <div class="section-header">
-        <h3>Recent Meetings</h3>
-        <button class="btn-ghost" style="font-size:12px;padding:5px 12px;">View all</button>
-      </div>
-      <div class="meeting-list">
-        <div class="meeting-item">
-          <div class="meeting-platform" style="background:rgba(88,101,242,0.15);">💬</div>
-          <div class="meeting-info">
-            <div class="meeting-title">Product Standup — Discord</div>
-            <div class="meeting-meta">Today, 9:00 AM · 32 minutes · 5 participants</div>
-          </div>
-          <span class="meeting-badge badge-done">✓ Summary Ready</span>
-        </div>
-        <div class="meeting-item">
-          <div class="meeting-platform" style="background:rgba(52,168,83,0.15);">📹</div>
-          <div class="meeting-info">
-            <div class="meeting-title">Client Demo — Google Meet</div>
-            <div class="meeting-meta">Yesterday, 3:00 PM · 45 minutes · 3 participants</div>
-          </div>
-          <span class="meeting-badge badge-done">✓ Summary Ready</span>
-        </div>
-        <div class="meeting-item">
-          <div class="meeting-platform" style="background:rgba(45,140,255,0.15);">🔵</div>
-          <div class="meeting-info">
-            <div class="meeting-title">Team Weekly — Zoom</div>
-            <div class="meeting-meta">Mar 17 · 60 minutes · 8 participants</div>
-          </div>
-          <span class="meeting-badge badge-done">✓ Summary Ready</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== CONNECT MODAL ===== -->
-<div class="modal-overlay" id="connect-modal">
-  <div class="modal">
-    <h3 id="modal-title">Connect Discord</h3>
-    <p id="modal-desc">Enter your Discord Bot Token and Server ID to connect your bot.</p>
-    <div id="modal-fields"></div>
-    <div class="modal-actions">
-      <button class="btn-ghost" style="flex:1;padding:12px;" onclick="closeModal()">Cancel</button>
-      <button class="btn-full" style="flex:2;" onclick="handleConnect()">Connect Platform</button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast">
-  <span id="toast-icon">✓</span>
-  <span id="toast-msg">Connected successfully!</span>
-</div>
-
-<script>
-  const connections = { discord: false, meet: false, zoom: false, teams: false };
-  let currentUser = null;
-  let currentModal = null;
-
-  const platformInfo = {
-    discord: {
-      title: 'Connect Discord',
-      desc: 'Enter your Discord Bot Token and Server ID to enable your AI agent on Discord.',
-      fields: [
-        { id: 'discord-token', label: 'Bot Token', type: 'password', placeholder: 'MTxxxxxxxxxxxxxxxxxxxxx' },
-        { id: 'discord-server', label: 'Server ID', type: 'text', placeholder: '123456789012345678' }
-      ]
-    },
-    meet: {
-      title: 'Connect Google Meet',
-      desc: 'Link your Google account to allow the bot to join your Google Meet meetings automatically.',
-      fields: [
-        { id: 'meet-email', label: 'Google Email', type: 'email', placeholder: 'you@gmail.com' }
-      ]
-    },
-    zoom: {
-      title: 'Connect Zoom',
-      desc: 'Enter your Zoom API credentials to enable automatic meeting joining.',
-      fields: [
-        { id: 'zoom-key', label: 'API Key', type: 'text', placeholder: 'Your Zoom API Key' },
-        { id: 'zoom-secret', label: 'API Secret', type: 'password', placeholder: 'Your Zoom API Secret' }
-      ]
-    },
-    teams: {
-      title: 'Connect Microsoft Teams',
-      desc: 'Enter your Microsoft Azure credentials to connect via Graph API.',
-      fields: [
-        { id: 'teams-tenant', label: 'Tenant ID', type: 'text', placeholder: 'Azure Tenant ID' },
-        { id: 'teams-client', label: 'Client ID', type: 'text', placeholder: 'Azure Client ID' }
-      ]
-    }
-  };
-
-  function showPage(page) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + page).classList.add('active');
-    if (page === 'dashboard' || page === 'meeting') {
-      document.getElementById('nav-public').style.display = 'none';
-      document.getElementById('nav-private').style.display = 'flex';
-    } else {
-      document.getElementById('nav-public').style.display = 'flex';
-      document.getElementById('nav-private').style.display = 'none';
-    }
-    window.scrollTo(0, 0);
-  }
-
-  async function handleLogin() {
-    const email = document.getElementById('login-email').value;
-    const pass = document.getElementById('login-password').value;
-    if (!email || !pass) { showToast('Please fill all fields', 'error'); return; }
-
-    const btn = document.querySelector('#page-login .btn-full');
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner" style="display:inline-block;margin:auto;"></div>';
-
-    try {
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password: pass })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-
-        currentUser = data.user;
-        document.getElementById('dash-name').textContent = currentUser.name;
-        document.getElementById('nav-username').textContent = currentUser.name;
-        document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
-        showToast('Welcome back, ' + currentUser.name + '! 👋', 'success');
-        showPage('dashboard');
-    } catch(err) {
-        showToast(err.message || 'Login failed', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Sign In';
-    }
-  }
-
-  async function handleRegister() {
-    const name = document.getElementById('reg-name').value;
-    const email = document.getElementById('reg-email').value;
-    const pass = document.getElementById('reg-password').value;
-    if (!name || !email || !pass) { showToast('Please fill all fields', 'error'); return; }
-    if (pass.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
-
-    const btn = document.querySelector('#page-register .btn-full');
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner" style="display:inline-block;margin:auto;"></div>';
-
-    try {
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password: pass })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-
-        currentUser = data.user;
-        document.getElementById('dash-name').textContent = currentUser.name;
-        document.getElementById('nav-username').textContent = currentUser.name;
-        document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
-        showToast('Account created! Welcome ' + name.split(' ')[0] + '! 🎉', 'success');
-        showPage('dashboard');
-    } catch(err) {
-        showToast(err.message || 'Registration failed', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Create Account';
-    }
-  }
-
-  function logout() {
-    currentUser = null;
-    showPage('landing');
-    showToast('Signed out successfully', 'success');
-  }
-
-  function showConnectModal(platform) {
-    currentModal = platform;
-    const info = platformInfo[platform];
-    document.getElementById('modal-title').textContent = connections[platform] ? 'Disconnect ' + platform.charAt(0).toUpperCase() + platform.slice(1) : info.title;
-    document.getElementById('modal-desc').textContent = connections[platform] ? 'Are you sure you want to disconnect this platform? Your bot will stop working for this platform.' : info.desc;
-
-    const fieldsHtml = connections[platform] ? '' : info.fields.map(f => `
-      <div class="form-group" style="margin-bottom:14px;">
-        <label>${f.label}</label>
-        <input type="${f.type}" id="${f.id}" placeholder="${f.placeholder}">
-      </div>
-    `).join('');
-
-    document.getElementById('modal-fields').innerHTML = fieldsHtml;
-    document.getElementById('connect-modal').classList.add('show');
-  }
-
-  function closeModal() {
-    document.getElementById('connect-modal').classList.remove('show');
-  }
-
-  async function handleConnect() {
-    const platform = currentModal;
-    
-    if (connections[platform]) {
-        try {
-            await fetch('/api/platform/disconnect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    platform, 
-                    email: currentUser?.email || 'test@test.com' 
-                })
-            });
-            connections[platform] = false;
-            updateConnectionUI(platform, false);
-            showToast(platform.charAt(0).toUpperCase() + platform.slice(1) + ' disconnected', 'error');
-        } catch(err) {
-            showToast('Disconnect failed', 'error');
-        }
-        closeModal();
-        updateConnectedCount();
-        return;
-    }
-
-    const info = platformInfo[platform];
-    const credentials = { email: currentUser?.email || 'test@test.com' };
-    
-    info.fields.forEach(f => {
-        const val = document.getElementById(f.id)?.value;
-        if (val) credentials[f.id] = val;
-    });
-
-    try {
-        const res = await fetch('/api/platform/connect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ platform, credentials })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-
-        connections[platform] = true;
-        updateConnectionUI(platform, true);
-        showToast(platform.charAt(0).toUpperCase() + platform.slice(1) + ' connected! 🎉', 'success');
-    } catch(err) {
-        showToast(err.message || 'Connection failed', 'error');
-    }
-    
-    closeModal();
-    updateConnectedCount();
-  }
-
-  function updateConnectionUI(platform, connected) {
-    const statusEl = document.getElementById('status-' + platform);
-    const cardEl = document.getElementById('card-' + platform);
-    const sbEl = document.getElementById('sb-' + platform);
-
-    if (connected) {
-      statusEl.className = 'connect-status status-connected';
-      statusEl.innerHTML = '<div class="status-dot"></div> Connected';
-      cardEl.classList.add('connected');
-      sbEl.style.background = 'var(--green)';
-      sbEl.style.boxShadow = '0 0 6px var(--green)';
-    } else {
-      statusEl.className = 'connect-status status-disconnected';
-      statusEl.innerHTML = '<div class="status-dot"></div> Connect';
-      cardEl.classList.remove('connected');
-      sbEl.style.background = 'var(--muted)';
-      sbEl.style.boxShadow = 'none';
-    }
-  }
-
-  function updateConnectedCount() {
-    const count = Object.values(connections).filter(Boolean).length;
-    document.getElementById('connected-count').textContent = count;
-  }
-
-  async function loadMeetings() {
-    if (!currentUser) return;
-    try {
-        const res = await fetch(`/api/meetings/${currentUser.email}`);
-        const meetings = await res.json();
-        
-        const list = document.querySelector('.meeting-list');
-        if (meetings.length === 0) {
-            list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">No meetings yet — paste a link above to start!</div>';
-            return;
-        }
-        
-        list.innerHTML = meetings.map(m => `
-            <div class="meeting-item" id="meeting-${m.id}">
-                <div class="meeting-platform" style="background:rgba(52,168,83,0.15);">📹</div>
-                <div class="meeting-info">
-                    <div class="meeting-title">${m.link}</div>
-                    <div class="meeting-meta">${m.created_at} · ${m.platform}</div>
-                </div>
-                <span class="meeting-badge ${m.summary === 'Processing...' ? 'badge-live' : 'badge-done'}">
-                    ${m.summary === 'Processing...' ? '🔴 Bot is Live' : '✓ Summary Ready'}
-                </span>
-            </div>
-        `).join('');
-
-        // Agar koi processing mein hai toh 10 sec baad refresh karo
-        const processing = meetings.filter(m => m.summary === 'Processing...');
-        if (processing.length > 0) {
-            setTimeout(loadMeetings, 10000);
-        }
-
-    } catch(err) {
-        console.log('Meetings load error:', err);
-    }
-  }
-
-  async function joinMeeting() {
-    const link = document.getElementById('meeting-link').value.trim();
-    if (!link) { showToast('Please paste a meeting link first', 'error'); return; }
-    
-    const btn = document.querySelector('.btn-join');
-    btn.textContent = 'Opening...';
-    btn.disabled = true;
-
-    try {
-        closeModal();
-        openMeetingRoom(link);
-        showToast('📹 Opening meeting room...', 'success');
-        document.getElementById('meeting-link').value = '';
-    } catch(err) {
-        showToast('Failed to open meeting', 'error');
-    } finally {
-        btn.textContent = 'Join & Record';
-        btn.disabled = false;
-    }
-  }
-
-  function switchTab(tab) {
-    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-  }
-
-  function showToast(msg, type = 'success') {
-    const toast = document.getElementById('toast');
-    document.getElementById('toast-msg').textContent = msg;
-    document.getElementById('toast-icon').textContent = type === 'success' ? '✓' : '✕';
-    toast.className = 'toast ' + type;
-    setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => toast.classList.remove('show'), 3500);
-  }
-
-  document.getElementById('connect-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
-  });
-
-  function initRevealAnimations() {
-    const reveals = document.querySelectorAll('.reveal');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('show');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
-
-    reveals.forEach((el, index) => {
-      el.style.transitionDelay = `${Math.min(index * 0.06, 0.36)}s`;
-      observer.observe(el);
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', initRevealAnimations);
-
-  // ===== MEETING ROOM =====
-  let mediaRecorder = null;
-  let audioChunks = [];
-  let recordingBlob = null;
-  let isRecording = false;
-  let transcriptInterval = null;
-  let fullTranscript = '';
-
-  function openMeetingRoom(link) {
-      let meetLink = link;
-      if (!meetLink.startsWith('http')) {
-          meetLink = 'https://' + meetLink;
-      }
-      
-      document.getElementById('meet-open-link').href = meetLink;
-      document.getElementById('meeting-room-title').textContent = meetLink.split('/').pop();
-      
-      showPage('meeting');
-  }
-
-  function leaveMeeting() {
-      if (isRecording) toggleRecording();
-      
-      document.getElementById('meet-open-link').href = '';
-      
-      showPage('dashboard');
-  }
-
-  async function toggleRecording() {
-      if (!isRecording) {
-          try {
-          const stream = await navigator.mediaDevices.getDisplayMedia({ 
-                  audio: true,
-            video: true
-              });
-              
-              mediaRecorder = new MediaRecorder(stream);
-              audioChunks = [];
-              fullTranscript = '';
-              
-              mediaRecorder.ondataavailable = (e) => {
-                  audioChunks.push(e.data);
-              };
-              
-              mediaRecorder.start(5000);
-              isRecording = true;
-              
-              document.getElementById('btn-record').textContent = '⏹️ Stop Recording';
-              document.getElementById('btn-record').style.background = '#374151';
-              document.getElementById('rec-indicator').style.display = 'flex';
-              document.getElementById('transcript-content').innerHTML = '<div style="color:var(--muted);font-size:12px;margin-bottom:12px;">Recording started...</div>';
-              
-              transcriptInterval = setInterval(updateTranscript, 30000);
-              
-              showToast('🎙️ Recording started!', 'success');
-              
-          } catch(err) {
-              showToast('Microphone access denied!', 'error');
-          }
-      } else {
-          mediaRecorder.stop();
-          isRecording = false;
-          clearInterval(transcriptInterval);
-          
-          mediaRecorder.onstop = async () => {
-              recordingBlob = new Blob(audioChunks, { type: 'audio/webm' });
-              
-              document.getElementById('btn-record').textContent = '🎙️ Start Recording';
-              document.getElementById('btn-record').style.background = '#ef4444';
-              document.getElementById('rec-indicator').style.display = 'none';
-              document.getElementById('btn-summary').style.display = 'block';
-              
-              await updateTranscript();
-              showToast('Recording saved! Click "Get Summary"', 'success');
-          };
-      }
-  }
-
-  async function updateTranscript() {
-      if (audioChunks.length === 0) return;
-      
-      try {
-          const blob = new Blob(audioChunks, { type: 'audio/webm' });
-          const formData = new FormData();
-          formData.append('audio', blob, 'recording.webm');
-          
-          const res = await fetch('/api/transcribe', {
-              method: 'POST',
-              body: formData
-          });
-          
-          const data = await res.json();
-          if (data.transcript) {
-              fullTranscript = data.transcript;
-              document.getElementById('transcript-content').innerHTML = 
-                  `<div style="font-size:13px;line-height:1.8;color:var(--color-text-secondary);">${fullTranscript}</div>`;
-          }
-      } catch(err) {
-          console.log('Transcript error:', err);
-      }
-  }
-
-  async function generateSummary() {
-      if (!fullTranscript && audioChunks.length === 0) {
-          showToast('No recording found!', 'error');
-          return;
-      }
-      
-      document.getElementById('summary-content').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">⏳ Generating summary...</div>';
-      switchPanel('summary');
-      
-      try {
-          const res = await fetch('/api/summarize', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transcript: fullTranscript })
-          });
-          
-          const data = await res.json();
-          
-          document.getElementById('summary-content').innerHTML = 
-              `<div style="font-size:13px;line-height:1.8;white-space:pre-wrap;">${data.summary}</div>`;
-          document.getElementById('summary-actions').style.display = 'flex';
-          
-          showToast('✨ Summary ready!', 'success');
-          
-      } catch(err) {
-          showToast('Summary failed!', 'error');
-      }
-  }
-
-  function downloadSummary() {
-      const summary = document.getElementById('summary-content').textContent;
-      const blob = new Blob([summary], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'meeting-summary.txt';
-      a.click();
-  }
-
-  function downloadAudio() {
-      if (!recordingBlob) return;
-      const url = URL.createObjectURL(recordingBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'meeting-recording.webm';
-      a.click();
-  }
-
-  function switchPanel(panel) {
-      document.getElementById('panel-transcript').style.display = panel === 'transcript' ? 'flex' : 'none';
-      document.getElementById('panel-summary').style.display = panel === 'summary' ? 'flex' : 'none';
-      document.getElementById('tab-transcript').style.borderBottomColor = panel === 'transcript' ? 'var(--accent)' : 'transparent';
-      document.getElementById('tab-transcript').style.color = panel === 'transcript' ? 'var(--color-text-primary)' : 'var(--muted)';
-      document.getElementById('tab-summary').style.borderBottomColor = panel === 'summary' ? 'var(--accent)' : 'transparent';
-      document.getElementById('tab-summary').style.color = panel === 'summary' ? 'var(--color-text-primary)' : 'var(--muted)';
-  }
-</script>
-
-<!-- MEETING ROOM PAGE -->
-<div class="page" id="page-meeting">
-  <div style="display:flex;flex-direction:column;height:100vh;padding-top:64px;">
-    
-    <!-- Top Bar -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--surface);">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button onclick="leaveMeeting()" class="btn-ghost" style="padding:8px 12px;">← Leave</button>
-        <span id="meeting-room-title" style="font-family:'Outfit',sans-serif;font-weight:700;font-size:16px;">Meeting Room</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div id="rec-indicator" style="display:none;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;background:rgba(239,68,68,0.1);color:#ef4444;font-size:13px;font-weight:500;">
-          <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:badgePulse 1s ease infinite;"></div>
-          Recording
-        </div>
-        <button id="btn-record" onclick="toggleRecording()" style="padding:10px 20px;border-radius:10px;border:none;background:#ef4444;color:white;font-family:'Manrope',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">
-          🎙️ Start Recording
-        </button>
-        <button id="btn-summary" onclick="generateSummary()" style="padding:10px 20px;border-radius:10px;border:none;background:var(--accent);color:white;font-family:'Manrope',sans-serif;font-size:14px;font-weight:500;cursor:pointer;display:none;">
-          ✨ Get Summary
-        </button>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <div style="display:flex;flex:1;overflow:hidden;">
-      
-      <!-- Instructions Panel -->
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface2);gap:20px;padding:40px;text-align:center;">
-        
-        <div style="width:80px;height:80px;border-radius:20px;background:rgba(52,168,83,0.15);display:flex;align-items:center;justify-content:center;font-size:36px;">
-          📹
-        </div>
-        
+<body class="font-sans text-slate-100">
+  <header class="sticky top-0 z-50 border-b border-slate-700/45 bg-slate-950/65 backdrop-blur-xl">
+    <nav class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      <a href="#" onclick="showView('landing')" class="flex items-center gap-3">
+        <span class="grid h-10 w-10 place-items-center rounded-xl border border-emerald-400/45 bg-emerald-500/20 text-emerald-300 shadow-[0_0_28px_rgba(16,185,129,.3)]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m5 12 5-5v10z" />
+            <path d="M12 7h7v10h-7" />
+          </svg>
+        </span>
         <div>
-          <h3 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">Step 1 — Join Meeting</h3>
-          <p style="color:var(--muted);font-size:14px;line-height:1.6;max-width:280px;">Open Google Meet in a new tab and join your meeting</p>
+          <p class="tight text-lg font-extrabold text-white">EagleBrain</p>
+          <p class="-mt-0.5 text-xs text-slate-400">Meeting Integrations OS</p>
         </div>
-        
-        <a id="meet-open-link" href="" target="_blank" 
-          style="padding:14px 32px;border-radius:12px;background:#34a853;color:white;font-family:'Manrope',sans-serif;font-size:15px;font-weight:500;text-decoration:none;">
-          🚀 Open Google Meet
-        </a>
-        
-        <div style="width:100%;max-width:300px;border-top:1px solid var(--border);padding-top:20px;">
-          <h3 style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;">Step 2 — Start Recording</h3>
-          <p style="color:var(--muted);font-size:13px;line-height:1.6;">Come back here and click "Start Recording" — your mic will be recorded</p>
-        </div>
+      </a>
 
-        <div style="width:100%;max-width:300px;border-top:1px solid var(--border);padding-top:20px;">
-          <h3 style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;">Step 3 — Get Summary</h3>
-          <p style="color:var(--muted);font-size:13px;line-height:1.6;">When done, click "Stop" then "Get Summary" — AI will analyze everything</p>
-        </div>
-
+      <div id="navPublic" class="hidden items-center gap-2 md:flex">
+        <button onclick="showView('landing')" class="rounded-lg border border-slate-700/65 px-3 py-2 text-sm text-slate-300 transition-all duration-200 hover:border-emerald-400/45 hover:text-white">Home</button>
+        <button onclick="scrollToIntegrations()" class="rounded-lg border border-slate-700/65 px-3 py-2 text-sm text-slate-300 transition-all duration-200 hover:border-emerald-400/45 hover:text-white">Integrations</button>
+        <button onclick="showAuthModal('login')" class="rounded-lg border border-slate-700/65 px-3 py-2 text-sm text-slate-300 transition-all duration-200 hover:border-emerald-400/45 hover:text-white">Sign In</button>
+        <button onclick="showAuthModal('register')" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-emerald-400">Create Account</button>
       </div>
 
-      <!-- Right Panel — Transcript -->
-      <div style="width:360px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);">
-        
-        <!-- Tabs -->
-        <div style="display:flex;border-bottom:1px solid var(--border);">
-          <button onclick="switchPanel('transcript')" id="tab-transcript" style="flex:1;padding:12px;border:none;background:transparent;color:var(--color-text-primary);font-family:'Manrope',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid var(--accent);">
-            📝 Live Transcript
-          </button>
-          <button onclick="switchPanel('summary')" id="tab-summary" style="flex:1;padding:12px;border:none;background:transparent;color:var(--muted);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;">
-            ✨ Summary
-          </button>
+      <div id="navPrivate" class="hidden items-center gap-3">
+        <span id="navUser" class="text-sm text-slate-300"></span>
+        <button onclick="showView('dashboard')" class="rounded-lg border border-slate-700/65 px-3 py-2 text-sm text-slate-300 transition-all duration-200 hover:border-emerald-400/45 hover:text-white">Dashboard</button>
+        <button onclick="logout()" class="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 transition-all duration-200 hover:bg-slate-700">Logout</button>
+      </div>
+
+      <div class="flex items-center gap-2 md:hidden">
+        <button onclick="showAuthModal('login')" class="rounded-lg border border-slate-700/65 px-3 py-2 text-xs font-semibold text-slate-300">Sign In</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+    <section id="view-landing" class="show-page">
+      <div class="grid gap-5 lg:grid-cols-12">
+        <article class="glass card-hover animate-reveal rounded-2xl p-6 shadow-panel lg:col-span-7 lg:p-8">
+          <span class="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+            <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulseSoft"></span>
+            Frontend + Backend Fully Connected
+          </span>
+
+          <h1 class="tight mt-5 text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl">
+            Outclass Animated
+            <span class="bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">EagleBrain</span>
+            Control Center
+          </h1>
+
+          <p class="mt-5 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
+            Register karo, integrations connect karo, meeting join karo, transcripts aur summaries auto-generate karo.
+            Zoom intentionally disabled hai, baki major integrations active workflow me connected hain.
+          </p>
+
+          <div class="mt-7 flex flex-wrap gap-3">
+            <button onclick="showAuthModal('register')" class="rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-emerald-400">Start Free</button>
+            <button onclick="showView('dashboard')" class="rounded-xl border border-slate-600/75 px-5 py-3 text-sm font-semibold text-slate-200 transition-all duration-200 hover:border-emerald-400/45">Open Dashboard</button>
+          </div>
+        </article>
+
+        <article class="glass card-hover animate-drift rounded-2xl p-6 shadow-panel lg:col-span-5 lg:p-8">
+          <div class="mb-4 flex items-center justify-between">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Live Signals</p>
+            <p class="text-sm font-bold text-emerald-300">99.2% Uptime</p>
+          </div>
+          <div class="space-y-3 text-sm">
+            <div class="rounded-xl border border-slate-700/70 bg-slate-900/70 p-3 text-slate-200"><span class="font-semibold text-white">Decision:</span> Integrations unified in single panel</div>
+            <div class="rounded-xl border border-slate-700/70 bg-slate-900/70 p-3 text-slate-200"><span class="font-semibold text-white">Action:</span> Connect platforms and launch bot join</div>
+            <div class="rounded-xl border border-slate-700/70 bg-slate-900/70 p-3 text-slate-200"><span class="font-semibold text-white">Status:</span> Zoom paused, remaining providers active</div>
+          </div>
+        </article>
+      </div>
+
+      <section id="integrations" class="mt-10 rounded-2xl border border-slate-700/55 bg-slate-950/30 p-5 sm:p-6 lg:p-7">
+        <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Integrations</p>
+            <h2 class="tight mt-1 text-2xl font-bold text-white sm:text-3xl">All Connected (Except Zoom)</h2>
+          </div>
+          <p class="max-w-md text-sm text-slate-400">Card click par setup detail khulti hai, phir direct connect/disconnect backend API se hota hai.</p>
         </div>
 
-        <!-- Transcript Panel -->
-        <div id="panel-transcript" style="flex:1;overflow-y:auto;padding:16px;display:flex;">
-          <div id="transcript-content" style="font-size:13px;color:var(--color-text-secondary);line-height:1.8;width:100%;">
-            <div style="text-align:center;color:var(--muted);margin-top:40px;">
-              <div style="font-size:32px;margin-bottom:8px;">🎙️</div>
-              <p>Start recording to see live transcript</p>
+        <div id="integrationGrid" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
+      </section>
+    </section>
+
+    <section id="view-dashboard" class="hidden-page">
+      <div class="grid gap-5 lg:grid-cols-12">
+        <article class="glass rounded-2xl p-6 shadow-panel lg:col-span-8">
+          <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Dashboard</p>
+              <h2 class="tight text-2xl font-bold text-white">Meeting Operations</h2>
+            </div>
+            <button onclick="refreshAll()" class="rounded-lg border border-slate-600/70 px-3 py-2 text-xs font-semibold text-slate-200 transition-all duration-200 hover:border-emerald-400/45">Refresh</button>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div class="rounded-xl border border-slate-700/65 bg-slate-900/70 p-4">
+              <p class="text-xs uppercase tracking-[0.12em] text-slate-400">Connected Apps</p>
+              <p id="statConnected" class="mt-2 text-2xl font-bold text-emerald-300">0</p>
+            </div>
+            <div class="rounded-xl border border-slate-700/65 bg-slate-900/70 p-4">
+              <p class="text-xs uppercase tracking-[0.12em] text-slate-400">Meetings</p>
+              <p id="statMeetings" class="mt-2 text-2xl font-bold text-cyan-300">0</p>
+            </div>
+            <div class="rounded-xl border border-slate-700/65 bg-slate-900/70 p-4">
+              <p class="text-xs uppercase tracking-[0.12em] text-slate-400">System</p>
+              <p class="mt-2 text-2xl font-bold text-emerald-300">Online</p>
             </div>
           </div>
-        </div>
 
-        <!-- Summary Panel -->
-        <div id="panel-summary" style="flex:1;overflow-y:auto;padding:16px;display:none;flex-direction:column;">
-          <div id="summary-content" style="font-size:13px;color:var(--color-text-secondary);line-height:1.8;">
-            <div style="text-align:center;color:var(--muted);margin-top:40px;">
-              <div style="font-size:32px;margin-bottom:8px;">✨</div>
-              <p>Summary will appear here after recording</p>
+          <div class="mt-6 rounded-xl border border-slate-700/65 bg-slate-900/70 p-4">
+            <h3 class="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-300">Join Meeting</h3>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+              <input id="meetingLink" type="text" placeholder="https://meet.google.com/..." class="rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+              <input id="botName" type="text" placeholder="Bot Name (optional)" class="rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+              <input id="botEmail" type="email" placeholder="Bot Gmail (optional)" class="rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+              <input id="botPassword" type="password" placeholder="Bot Password (optional)" class="rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+            </div>
+            <button onclick="joinMeeting()" class="mt-3 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-emerald-400">Join and Process</button>
+          </div>
+
+          <div class="mt-4 rounded-xl border border-emerald-400/25 bg-slate-900/70 p-4">
+            <div class="mb-3 flex items-center justify-between">
+              <h3 class="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-300">Google Meet Studio</h3>
+              <span id="studioState" class="rounded-full border border-slate-600/70 px-2 py-0.5 text-xs text-slate-300">Idle</span>
+            </div>
+            <p class="text-xs text-slate-400">Link paste karo, Google Meet tab open karo, sign-in/join karo, phir yahan se recording aur AI summary generate karo.</p>
+
+            <input id="studioMeetLink" type="text" placeholder="https://meet.google.com/xxx-xxxx-xxx" class="mt-3 w-full rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button onclick="openMeetTab()" class="rounded-lg bg-cyan-500 px-3 py-2 text-xs font-semibold text-slate-950 transition-all duration-200 hover:bg-cyan-400">Open Meet Tab</button>
+              <button onclick="startStudioRecording()" class="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950 transition-all duration-200 hover:bg-emerald-400">Start Recording</button>
+              <button onclick="stopStudioRecording()" class="rounded-lg border border-slate-600/70 px-3 py-2 text-xs font-semibold text-slate-200 transition-all duration-200 hover:border-rose-400/45">Stop Recording</button>
+              <button onclick="generateStudioSummary()" class="rounded-lg border border-slate-600/70 px-3 py-2 text-xs font-semibold text-slate-200 transition-all duration-200 hover:border-emerald-400/45">Generate Summary</button>
+            </div>
+
+            <div class="mt-3 grid gap-3 lg:grid-cols-2">
+              <div class="rounded-lg border border-slate-700/65 bg-slate-950/60 p-3">
+                <p class="text-xs uppercase tracking-[0.12em] text-slate-400">Transcript</p>
+                <div id="studioTranscript" class="mt-2 max-h-40 overflow-y-auto text-xs leading-6 text-slate-300">No transcript yet.</div>
+              </div>
+              <div class="rounded-lg border border-slate-700/65 bg-slate-950/60 p-3">
+                <p class="text-xs uppercase tracking-[0.12em] text-slate-400">Summary</p>
+                <div id="studioSummary" class="mt-2 max-h-40 overflow-y-auto text-xs leading-6 text-slate-300">No summary yet.</div>
+              </div>
             </div>
           </div>
-          <div id="summary-actions" style="display:none;margin-top:16px;flex-direction:column;gap:8px;">
-            <button onclick="downloadSummary()" class="btn-ghost" style="width:100%;padding:10px;">📄 Download Summary</button>
-            <button onclick="downloadAudio()" class="btn-ghost" style="width:100%;padding:10px;">🎵 Download Recording</button>
-          </div>
+        </article>
+
+        <article class="glass rounded-2xl p-6 shadow-panel lg:col-span-4">
+          <h3 class="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-300">Connection Status</h3>
+          <div id="statusList" class="mt-3 space-y-2"></div>
+        </article>
+      </div>
+
+      <section class="mt-5 rounded-2xl border border-slate-700/55 bg-slate-950/30 p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <h3 class="tight text-xl font-bold text-white">Recent Meetings</h3>
+        </div>
+        <div id="meetingList" class="space-y-2"></div>
+      </section>
+    </section>
+  </main>
+
+  <section id="integrationDetail" class="fixed inset-0 z-[60] hidden items-end justify-center bg-slate-950/75 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+    <div class="w-full max-w-4xl rounded-t-2xl border border-slate-700/55 bg-slate-900/95 p-5 shadow-panel sm:rounded-2xl sm:p-6">
+      <div class="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Integration Setup</p>
+          <h3 id="detailName" class="tight mt-1 text-3xl font-extrabold text-white">Discord</h3>
+          <p id="detailDesc" class="mt-2 max-w-2xl text-sm text-slate-300"></p>
+        </div>
+        <button onclick="hideIntegrationDetail()" class="rounded-lg border border-slate-600/70 px-3 py-2 text-xs font-semibold text-slate-300 transition-all duration-200 hover:border-emerald-400/45 hover:text-white">Close</button>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div class="lg:col-span-2">
+          <h4 class="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-emerald-300">API and Joining Procedure</h4>
+          <div id="detailSteps" class="space-y-2"></div>
+          <div id="detailActions" class="mt-3 flex flex-wrap gap-2"></div>
         </div>
 
+        <aside class="rounded-xl border border-slate-700/65 bg-slate-900/65 p-4">
+          <h4 class="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-emerald-300">Free Connect Links</h4>
+          <div id="freeLinks" class="space-y-2"></div>
+        </aside>
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
+  <section id="authModal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-2xl border border-slate-700/65 bg-slate-900/95 p-5 shadow-panel">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="authTitle" class="tight text-2xl font-bold text-white">Sign In</h3>
+        <button onclick="hideAuthModal()" class="rounded-md border border-slate-600/70 px-2 py-1 text-xs text-slate-300">Close</button>
+      </div>
+      <div class="space-y-3">
+        <input id="authName" type="text" placeholder="Full name" class="hidden w-full rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+        <input id="authEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+        <input id="authPassword" type="password" placeholder="Password" class="w-full rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+      </div>
+      <button id="authSubmit" onclick="submitAuth()" class="mt-4 w-full rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-emerald-400">Sign In</button>
+      <p id="authSwitch" class="mt-3 text-center text-sm text-slate-400"></p>
+    </div>
+  </section>
+
+  <section id="toast" class="fixed bottom-4 right-4 z-[80] hidden rounded-lg border border-slate-700/65 bg-slate-900/95 px-4 py-3 text-sm text-slate-200 shadow-panel"></section>
+
+  <script>
+    const integrations = {
+      discord: {
+        enabled: true,
+        icon: 'Discord',
+        desc: 'Bot token and guild based live workflows',
+        longDesc: 'Discord Developer Portal se app create karo, bot token generate karo, server invite do, phir EagleBrain me connect karo.',
+        fields: [
+          { id: 'discord-token', label: 'Bot Token', type: 'password', placeholder: 'MTxxxxxxxxxxxxxxxx' },
+          { id: 'discord-server', label: 'Server ID', type: 'text', placeholder: '1234567890123' }
+        ],
+        steps: [
+          'Developer Portal me New Application banao.',
+          'Bot token generate karo aur secure store karo.',
+          'OAuth URL se bot server me add karo.',
+          'Token aur Server ID EagleBrain me save karo.'
+        ],
+        links: [
+          { label: 'Discord Developer Portal', href: 'https://discord.com/developers/applications' },
+          { label: 'Discord API Docs', href: 'https://discord.com/developers/docs/intro' }
+        ]
+      },
+      meet: {
+        enabled: true,
+        icon: 'Google Meet',
+        desc: 'Google OAuth and meeting auto join',
+        longDesc: 'Google account OAuth se connect karo, calendar read access do, phir meet links auto-process hongi.',
+        fields: [],
+        steps: [
+          'Google Cloud me OAuth credentials setup karo.',
+          'Website par Google connect flow complete karo.',
+          'Meeting links dashboard se join/process karo.'
+        ],
+        links: [
+          { label: 'Google Workspace APIs', href: 'https://developers.google.com/workspace' },
+          { label: 'Google Cloud Free Tier', href: 'https://cloud.google.com/free' }
+        ]
+      },
+      teams: {
+        enabled: true,
+        icon: 'Microsoft Teams',
+        desc: 'Graph API and tenant based automation',
+        longDesc: 'Azure app registration, tenant/client credentials aur graph permissions ke saath Teams connect hota hai.',
+        fields: [
+          { id: 'teams-tenant', label: 'Tenant ID', type: 'text', placeholder: 'Azure tenant id' },
+          { id: 'teams-client', label: 'Client ID', type: 'text', placeholder: 'Azure client id' }
+        ],
+        steps: [
+          'Azure App Registration create karo.',
+          'Tenant ID and Client ID/Secret generate karo.',
+          'Graph permissions grant and consent complete karo.',
+          'Credentials EagleBrain me connect karo.'
+        ],
+        links: [
+          { label: 'Microsoft Graph Teams', href: 'https://learn.microsoft.com/en-us/graph/teams-concept-overview' },
+          { label: 'Azure Free Account', href: 'https://azure.microsoft.com/free/' }
+        ]
+      },
+      telegram: {
+        enabled: true,
+        icon: 'Telegram',
+        desc: 'Botfather token based messaging bot',
+        longDesc: 'BotFather se token lo aur Telegram workflow ko EagleBrain me map karo.',
+        fields: [
+          { id: 'telegram-token', label: 'Bot Token', type: 'password', placeholder: '12345:AA...' }
+        ],
+        steps: [
+          'BotFather me /newbot command run karo.',
+          'Token ko secure env me save karo.',
+          'Webhook ya polling setup karo.',
+          'Token EagleBrain me connect karo.'
+        ],
+        links: [
+          { label: 'Telegram Bot API', href: 'https://core.telegram.org/bots/api' },
+          { label: 'BotFather Guide', href: 'https://core.telegram.org/bots/features#botfather' }
+        ]
+      },
+      whatsapp: {
+        enabled: true,
+        icon: 'WhatsApp',
+        desc: 'QR pairing and cloud api options',
+        longDesc: 'WhatsApp bot QR pairing ya cloud API se connect karke message workflows automate karo.',
+        fields: [
+          { id: 'whatsapp-session', label: 'Session Key', type: 'text', placeholder: 'session-name' }
+        ],
+        steps: [
+          'Baileys install and QR pairing setup karo.',
+          'Session persist karo for reconnect.',
+          'Webhook logic with your bot map karo.',
+          'Session key EagleBrain me add karo.'
+        ],
+        links: [
+          { label: 'Baileys GitHub', href: 'https://github.com/WhiskeySockets/Baileys' },
+          { label: 'WhatsApp Cloud API', href: 'https://developers.facebook.com/docs/whatsapp' }
+        ]
+      },
+      slack: {
+        enabled: true,
+        icon: 'Slack',
+        desc: 'Workspace app and events based flows',
+        longDesc: 'Slack app create karke bot token and event subscriptions ke saath integration complete karo.',
+        fields: [
+          { id: 'slack-token', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...' }
+        ],
+        steps: [
+          'Slack app create and scopes set karo.',
+          'Event subscriptions enable karo.',
+          'Bot token generate and secure save karo.',
+          'Token EagleBrain me connect karo.'
+        ],
+        links: [
+          { label: 'Slack API Start', href: 'https://api.slack.com/start' },
+          { label: 'Slack Apps', href: 'https://api.slack.com/apps' }
+        ]
+      },
+      signal: {
+        enabled: true,
+        icon: 'Signal',
+        desc: 'signal-cli bridge based secure messaging',
+        longDesc: 'Signal-cli setup karke bridge endpoints ke zariye secure channel integrate karo.',
+        fields: [
+          { id: 'signal-number', label: 'Signal Number', type: 'text', placeholder: '+1xxxxxxxxxx' }
+        ],
+        steps: [
+          'signal-cli install and register number karo.',
+          'Bridge API endpoint configure karo.',
+          'Message handlers EagleBrain workflows se connect karo.',
+          'Signal profile details dashboard me save karo.'
+        ],
+        links: [
+          { label: 'signal-cli Repo', href: 'https://github.com/AsamK/signal-cli' },
+          { label: 'signal-cli REST API', href: 'https://github.com/bbernhard/signal-cli-rest-api' }
+        ]
+      },
+      zoom: {
+        enabled: false,
+        icon: 'Zoom',
+        desc: 'Temporarily disabled by project requirement',
+        longDesc: 'Zoom integration intentionally disabled hai as requested.',
+        fields: [],
+        steps: [
+          'Zoom integration project requirement ke mutabiq disabled hai.'
+        ],
+        links: [
+          { label: 'Zoom Developers', href: 'https://developers.zoom.us/docs/' }
+        ]
+      }
+    };
+
+    let authMode = 'login';
+    let currentUser = null;
+    let currentIntegration = null;
+    const connectionState = {};
+    let studioRecorder = null;
+    let studioStream = null;
+    let studioChunks = [];
+    let studioTranscriptText = '';
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      toast.classList.toggle('border-rose-400/50', isError);
+      toast.classList.toggle('text-rose-200', isError);
+      setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
+
+    function setStudioState(text, isActive = false) {
+      const state = document.getElementById('studioState');
+      state.textContent = text;
+      state.className = `rounded-full border px-2 py-0.5 text-xs ${isActive ? 'border-emerald-400/50 text-emerald-300' : 'border-slate-600/70 text-slate-300'}`;
+    }
+
+    function openMeetTab() {
+      const link = document.getElementById('studioMeetLink').value.trim();
+      if (!link) {
+        showToast('Meet link paste karo', true);
+        return;
+      }
+      const fullLink = link.startsWith('http') ? link : `https://${link}`;
+      window.open(fullLink, '_blank', 'noopener,noreferrer');
+      showToast('Google Meet tab opened. Sign in and join the meeting.');
+      setStudioState('Meet Opened');
+    }
+
+    async function startStudioRecording() {
+      if (studioRecorder) {
+        showToast('Recording already in progress', true);
+        return;
+      }
+      try {
+        studioStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        studioChunks = [];
+        studioTranscriptText = '';
+        document.getElementById('studioTranscript').textContent = 'Recording started...';
+        document.getElementById('studioSummary').textContent = 'No summary yet.';
+
+        studioRecorder = new MediaRecorder(studioStream, { mimeType: 'audio/webm' });
+        studioRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) studioChunks.push(e.data);
+        };
+        studioRecorder.onstop = async () => {
+          await transcribeStudioAudio();
+        };
+
+        studioRecorder.start(3000);
+        setStudioState('Recording', true);
+        showToast('Recording started. Share tab with audio enabled.');
+      } catch (err) {
+        showToast('Recording permission denied or unavailable', true);
+      }
+    }
+
+    async function stopStudioRecording() {
+      if (!studioRecorder) {
+        showToast('No active recording', true);
+        return;
+      }
+      try {
+        studioRecorder.stop();
+        if (studioStream) studioStream.getTracks().forEach((t) => t.stop());
+        studioStream = null;
+        studioRecorder = null;
+        setStudioState('Processing Audio');
+        showToast('Recording stopped. Transcribing...');
+      } catch (err) {
+        showToast('Failed to stop recording', true);
+      }
+    }
+
+    async function transcribeStudioAudio() {
+      if (!studioChunks.length) {
+        document.getElementById('studioTranscript').textContent = 'No audio captured.';
+        setStudioState('Idle');
+        return;
+      }
+
+      try {
+        const blob = new Blob(studioChunks, { type: 'audio/webm' });
+        const form = new FormData();
+        form.append('audio', blob, 'studio.webm');
+
+        const res = await fetch('/api/transcribe', { method: 'POST', body: form });
+        const data = await res.json();
+        studioTranscriptText = (data.transcript || '').trim();
+
+        document.getElementById('studioTranscript').textContent = studioTranscriptText || 'Transcription empty.';
+        setStudioState(studioTranscriptText ? 'Transcript Ready' : 'Idle');
+      } catch (err) {
+        document.getElementById('studioTranscript').textContent = 'Transcription failed.';
+        setStudioState('Idle');
+        showToast('Transcription failed', true);
+      }
+    }
+
+    async function generateStudioSummary() {
+      if (!studioTranscriptText) {
+        showToast('Pehle recording/transcript complete karo', true);
+        return;
+      }
+      try {
+        document.getElementById('studioSummary').textContent = 'Generating summary...';
+        setStudioState('Summarizing', true);
+
+        const res = await fetch('/api/summarize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: studioTranscriptText })
+        });
+        const data = await res.json();
+        document.getElementById('studioSummary').textContent = data.summary || 'Summary unavailable.';
+        setStudioState('Summary Ready');
+        showToast('Summary generated');
+      } catch (err) {
+        document.getElementById('studioSummary').textContent = 'Summary failed.';
+        setStudioState('Idle');
+        showToast('Summary generation failed', true);
+      }
+    }
+
+    function showView(view) {
+      document.getElementById('view-landing').className = view === 'landing' ? 'show-page' : 'hidden-page';
+      document.getElementById('view-dashboard').className = view === 'dashboard' ? 'show-page' : 'hidden-page';
+      if (view === 'dashboard') {
+        if (!currentUser) {
+          showAuthModal('login');
+          showToast('Please login first', true);
+          showView('landing');
+          return;
+        }
+        refreshAll();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function scrollToIntegrations() {
+      showView('landing');
+      setTimeout(() => {
+        document.getElementById('integrations').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    }
+
+    function toggleNav() {
+      const pub = document.getElementById('navPublic');
+      const prv = document.getElementById('navPrivate');
+      if (currentUser) {
+        pub.classList.add('hidden');
+        prv.classList.remove('hidden');
+        prv.classList.add('flex');
+        document.getElementById('navUser').textContent = currentUser.name;
+      } else {
+        prv.classList.add('hidden');
+        pub.classList.remove('hidden');
+        pub.classList.add('flex');
+      }
+    }
+
+    function showAuthModal(mode) {
+      authMode = mode;
+      const modal = document.getElementById('authModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('overflow-hidden');
+
+      const title = document.getElementById('authTitle');
+      const name = document.getElementById('authName');
+      const submit = document.getElementById('authSubmit');
+      const sw = document.getElementById('authSwitch');
+
+      if (mode === 'register') {
+        title.textContent = 'Create Account';
+        name.classList.remove('hidden');
+        submit.textContent = 'Register';
+        sw.innerHTML = 'Already have account? <button class="text-emerald-300" onclick="showAuthModal(\'login\')">Sign in</button>';
+      } else {
+        title.textContent = 'Sign In';
+        name.classList.add('hidden');
+        submit.textContent = 'Sign In';
+        sw.innerHTML = 'No account? <button class="text-emerald-300" onclick="showAuthModal(\'register\')">Create one</button>';
+      }
+    }
+
+    function hideAuthModal() {
+      const modal = document.getElementById('authModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    async function submitAuth() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value.trim();
+      const name = document.getElementById('authName').value.trim();
+
+      if (!email || !password || (authMode === 'register' && !name)) {
+        showToast('Please fill required fields', true);
+        return;
+      }
+
+      const endpoint = authMode === 'register' ? '/api/register' : '/api/login';
+      const payload = authMode === 'register' ? { name, email, password } : { email, password };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Auth failed');
+
+        currentUser = data.user;
+        toggleNav();
+        hideAuthModal();
+        showToast(authMode === 'register' ? 'Account created' : 'Login successful');
+        showView('dashboard');
+      } catch (err) {
+        showToast(err.message || 'Auth failed', true);
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      toggleNav();
+      showView('landing');
+      showToast('Logged out');
+    }
+
+    function renderIntegrationCards() {
+      const grid = document.getElementById('integrationGrid');
+      const keys = Object.keys(integrations);
+      grid.innerHTML = keys.map((key) => {
+        const i = integrations[key];
+        const disabledTag = i.enabled ? '' : '<span class="mt-2 inline-flex rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-xs text-rose-300">Disabled</span>';
+        return `
+          <button onclick="openIntegrationDetail('${key}')" class="glass card-hover rounded-2xl p-5 text-left">
+            <p class="text-sm font-semibold uppercase tracking-[0.12em] text-emerald-300">${i.icon}</p>
+            <h3 class="tight mt-2 text-xl font-bold text-white">${capitalize(key)}</h3>
+            <p class="mt-1 text-sm text-slate-400">${i.desc}</p>
+            ${disabledTag}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function capitalize(s) {
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function openIntegrationDetail(key) {
+      currentIntegration = key;
+      const i = integrations[key];
+      document.getElementById('detailName').textContent = capitalize(key);
+      document.getElementById('detailDesc').textContent = i.longDesc;
+
+      document.getElementById('detailSteps').innerHTML = i.steps.map((step, idx) => `
+        <div class="rounded-xl border border-slate-700/65 bg-slate-900/70 p-3 text-sm text-slate-200">
+          <span class="font-semibold text-emerald-300">Step ${idx + 1}:</span> ${step}
+        </div>
+      `).join('');
+
+      document.getElementById('freeLinks').innerHTML = i.links.map((link) => `
+        <a href="${link.href}" target="_blank" rel="noopener noreferrer" class="block rounded-lg border border-slate-700/65 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 transition-all duration-200 hover:border-emerald-400/45 hover:text-white">${link.label}</a>
+      `).join('');
+
+      const actions = document.getElementById('detailActions');
+      if (!i.enabled) {
+        actions.innerHTML = '<button disabled class="cursor-not-allowed rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-300">Zoom Disabled</button>';
+      } else if (key === 'meet') {
+        actions.innerHTML = `
+          <a href="/auth/google" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-emerald-400">Connect Google OAuth</a>
+          <button onclick="toggleConnection('${key}')" class="rounded-lg border border-slate-600/70 px-4 py-2 text-sm font-semibold text-slate-200">Connect/Disconnect</button>
+        `;
+      } else {
+        const fields = i.fields.map((f) => `
+          <div class="w-full">
+            <label class="mb-1 block text-xs uppercase tracking-[0.12em] text-slate-400">${f.label}</label>
+            <input id="${f.id}" type="${f.type}" placeholder="${f.placeholder}" class="w-full rounded-lg border border-slate-600/70 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/55" />
+          </div>
+        `).join('');
+        actions.innerHTML = `<div class="grid w-full gap-2 sm:grid-cols-2">${fields}</div>
+          <button onclick="toggleConnection('${key}')" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-emerald-400">Save Connection</button>
+          <button onclick="disconnectPlatform('${key}')" class="rounded-lg border border-slate-600/70 px-4 py-2 text-sm font-semibold text-slate-200">Disconnect</button>`;
+      }
+
+      const modal = document.getElementById('integrationDetail');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function hideIntegrationDetail() {
+      const modal = document.getElementById('integrationDetail');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    async function toggleConnection(platform) {
+      if (!currentUser) {
+        showToast('Please login first', true);
+        return;
+      }
+
+      if (platform === 'zoom') {
+        showToast('Zoom is disabled by requirement', true);
+        return;
+      }
+
+      const info = integrations[platform];
+      const credentials = { email: currentUser.email };
+      if (info.fields) {
+        info.fields.forEach((f) => {
+          const val = document.getElementById(f.id)?.value;
+          if (val) credentials[f.id] = val;
+        });
+      }
+
+      try {
+        const res = await fetch('/api/platform/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform, credentials })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Connect failed');
+        showToast(`${capitalize(platform)} connected`);
+        await loadPlatformStatus();
+      } catch (err) {
+        showToast(err.message || 'Connect failed', true);
+      }
+    }
+
+    async function disconnectPlatform(platform) {
+      if (!currentUser) return;
+      try {
+        await fetch('/api/platform/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform, email: currentUser.email })
+        });
+        showToast(`${capitalize(platform)} disconnected`);
+        await loadPlatformStatus();
+      } catch (err) {
+        showToast('Disconnect failed', true);
+      }
+    }
+
+    async function loadPlatformStatus() {
+      if (!currentUser) return;
+      try {
+        const res = await fetch(`/api/platform/status/${encodeURIComponent(currentUser.email)}`);
+        const data = await res.json();
+
+        const statusList = document.getElementById('statusList');
+        const keys = Object.keys(integrations);
+        let connectedCount = 0;
+
+        statusList.innerHTML = keys.map((k) => {
+          const isConnected = !!data[k];
+          if (isConnected) connectedCount += 1;
+          const disabled = integrations[k].enabled ? '' : ' (disabled)';
+          return `<div class="flex items-center justify-between rounded-lg border border-slate-700/60 bg-slate-900/65 px-3 py-2 text-sm">
+            <span class="text-slate-200">${capitalize(k)}${disabled}</span>
+            <span class="${isConnected ? 'text-emerald-300' : 'text-slate-400'}">${isConnected ? 'Connected' : 'Not Connected'}</span>
+          </div>`;
+        }).join('');
+
+        document.getElementById('statConnected').textContent = connectedCount;
+      } catch (err) {
+        showToast('Status load failed', true);
+      }
+    }
+
+    async function joinMeeting() {
+      if (!currentUser) {
+        showToast('Please login first', true);
+        return;
+      }
+
+      const link = document.getElementById('meetingLink').value.trim();
+      if (!link) {
+        showToast('Meeting link required', true);
+        return;
+      }
+
+      const payload = {
+        link,
+        user_email: currentUser.email,
+        bot_name: document.getElementById('botName').value.trim() || 'Meeting Bot',
+        bot_email: document.getElementById('botEmail').value.trim(),
+        bot_password: document.getElementById('botPassword').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/meeting/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Join failed');
+        showToast(data.message || 'Meeting processing started');
+        await loadMeetings();
+      } catch (err) {
+        showToast(err.message || 'Join failed', true);
+      }
+    }
+
+    async function loadMeetings() {
+      if (!currentUser) return;
+      try {
+        const res = await fetch(`/api/meetings/${encodeURIComponent(currentUser.email)}`);
+        const meetings = await res.json();
+        document.getElementById('statMeetings').textContent = Array.isArray(meetings) ? meetings.length : 0;
+
+        const list = document.getElementById('meetingList');
+        if (!Array.isArray(meetings) || meetings.length === 0) {
+          list.innerHTML = '<div class="rounded-lg border border-slate-700/65 bg-slate-900/65 p-3 text-sm text-slate-400">No meetings yet.</div>';
+          return;
+        }
+
+        list.innerHTML = meetings.slice(0, 12).map((m) => {
+          const ready = m.summary && m.summary !== 'Processing...';
+          return `<div class="rounded-lg border border-slate-700/65 bg-slate-900/65 p-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-white">${m.link}</p>
+                <p class="mt-1 text-xs text-slate-400">${m.platform} | ${m.created_at}</p>
+              </div>
+              <span class="rounded-full px-2 py-0.5 text-xs ${ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}">${ready ? 'Summary Ready' : 'Processing'}</span>
+            </div>
+            <p class="mt-2 text-xs text-slate-300">${ready ? m.summary.slice(0, 220) : 'Meeting is being processed...'}</p>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        showToast('Meeting load failed', true);
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([loadPlatformStatus(), loadMeetings()]);
+    }
+
+    function hydrateFromQuery() {
+      const qs = new URLSearchParams(window.location.search || window.location.hash.replace('#', '?'));
+      if (qs.get('google_connected') === 'true') {
+        const email = qs.get('email');
+        const name = qs.get('name') || 'Google User';
+        if (email) {
+          currentUser = { email, name };
+          toggleNav();
+          showToast('Google connected successfully');
+          showView('dashboard');
+        }
+      }
+    }
+
+    document.getElementById('integrationDetail').addEventListener('click', (e) => {
+      if (e.target.id === 'integrationDetail') hideIntegrationDetail();
+    });
+
+    document.getElementById('authModal').addEventListener('click', (e) => {
+      if (e.target.id === 'authModal') hideAuthModal();
+    });
+
+    renderIntegrationCards();
+    toggleNav();
+    hydrateFromQuery();
+  </script>
 </body>
 </html>

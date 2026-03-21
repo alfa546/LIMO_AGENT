@@ -64,13 +64,13 @@ class MeetingJoin(BaseModel):
     user_email: str = "guest@meetingagent.com"
     bot_name: str = "Meeting Bot"
     bot_email: str = ""
+    bot_password: str = ""
 
 class TranscribeRequest(BaseModel):
     audio: bytes = None
 
 class SummarizeRequest(BaseModel):
     transcript: str
-    bot_password: str = ""
 
 class PlatformConnect(BaseModel):
     platform: str
