@@ -18,6 +18,8 @@ import hashlib
 import json
 import os
 import asyncio
+import re
+from datetime import datetime, timezone, timedelta
 from bot.meeting_joiner import join_google_meet
 
 def hash_password(password: str) -> str:
@@ -71,6 +73,7 @@ class TranscribeRequest(BaseModel):
 
 class SummarizeRequest(BaseModel):
     transcript: str
+    language: str = "auto"
 
 class PlatformConnect(BaseModel):
     platform: str
@@ -229,6 +232,91 @@ async def get_meetings(email: str):
         "created_at": str(m.created_at)
     } for m in meetings]
 
+
+def _extract_meeting_link(event: dict) -> str:
+    if event.get("hangoutLink"):
+        return event.get("hangoutLink")
+
+    conference = event.get("conferenceData", {})
+    for entry in conference.get("entryPoints", []) or []:
+        uri = entry.get("uri")
+        if uri and uri.startswith("http"):
+            return uri
+
+    text_pool = " ".join([
+        str(event.get("description") or ""),
+        str(event.get("location") or "")
+    ])
+    pattern = r"https?://[^\s]+"
+    urls = re.findall(pattern, text_pool)
+    for url in urls:
+        low = url.lower()
+        if any(key in low for key in ["meet.google.com", "zoom.us", "teams.microsoft.com", "webex.com"]):
+            return url
+    return ""
+
+
+@app.get("/api/calendar/meetings/{email}")
+async def calendar_meetings(email: str):
+    db = SessionLocal()
+    platform = db.query(Platform).filter(
+        Platform.user_email == email,
+        Platform.platform == "google",
+        Platform.connected == True
+    ).first()
+    db.close()
+
+    if not platform:
+        raise HTTPException(status_code=404, detail="Google Calendar is not connected")
+
+    try:
+        creds = json.loads(platform.credentials or "{}")
+    except Exception:
+        creds = {}
+
+    access_token = creds.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Google access token missing. Reconnect Google account.")
+
+    now = datetime.now(timezone.utc)
+    time_min = now.isoformat().replace("+00:00", "Z")
+    time_max = (now + timedelta(days=7)).isoformat().replace("+00:00", "Z")
+
+    url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+    params = {
+        "timeMin": time_min,
+        "timeMax": time_max,
+        "singleEvents": "true",
+        "orderBy": "startTime",
+        "maxResults": 25
+    }
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.get(url, params=params, headers=headers)
+
+    if resp.status_code == 401:
+        raise HTTPException(status_code=401, detail="Google token expired. Please reconnect Google OAuth.")
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail="Failed to fetch calendar meetings")
+
+    payload = resp.json()
+    items = payload.get("items", [])
+    meetings = []
+    for item in items:
+        link = _extract_meeting_link(item)
+        if not link:
+            continue
+        start = (item.get("start") or {}).get("dateTime") or (item.get("start") or {}).get("date")
+        meetings.append({
+            "id": item.get("id"),
+            "title": item.get("summary") or "Untitled meeting",
+            "start": start,
+            "link": link
+        })
+
+    return {"meetings": meetings}
+
 @app.get("/auth/google")
 async def google_login(request: Request):
     redirect_uri = str(request.base_url) + "auth/google/callback"
@@ -299,11 +387,11 @@ async def transcribe_audio_api(audio: UploadFile = File(...)):
         return {"transcript": "", "error": str(e)}
 
 @app.post("/api/summarize")
-async def summarize_api(data: dict):
+async def summarize_api(data: SummarizeRequest):
     try:
         from agent.summarizer import summarize_transcript
-        result = summarize_transcript(data.get('transcript', ''))
-        return {"summary": result['summary']}
+        result = summarize_transcript(data.transcript, data.language)
+        return {"summary": result['summary'], "language": result.get("language", data.language)}
     except Exception as e:
         return {"summary": "", "error": str(e)}
 

@@ -6,13 +6,15 @@ load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-def summarize_transcript(transcript: str) -> dict:
+def summarize_transcript(transcript: str, target_language: str = "auto") -> dict:
     """Transcript se meeting summary nikalo"""
     print("Summarizing transcript...")
 
-    prompt = f"""
-You are a meeting assistant. Analyze this meeting transcript and provide a summary.
+    normalized = (target_language or "auto").strip().lower()
+    if normalized not in {"auto", "english", "urdu", "hindi"}:
+        normalized = "auto"
 
+    language_rule = """
 LANGUAGE RULES - Follow strictly:
 - If transcript is in English only -> respond in English
 - If transcript is in Urdu only -> respond in Roman Urdu (Urdu written in English letters, NOT Urdu script)
@@ -20,6 +22,19 @@ LANGUAGE RULES - Follow strictly:
 - NEVER use Urdu script characters
 - NEVER use Arabic script
 - Roman Urdu example: "Is meeting mein discuss hua ke project deadline extend hogi"
+"""
+
+    if normalized == "english":
+        language_rule = "Respond only in clear English."
+    elif normalized == "urdu":
+        language_rule = "Respond only in Roman Urdu. Do not use Urdu/Arabic script."
+    elif normalized == "hindi":
+        language_rule = "Respond only in Hindi written in Devanagari script."
+
+    prompt = f"""
+You are a meeting assistant. Analyze this meeting transcript and provide a summary.
+
+{language_rule}
 
 Provide:
 1. **Meeting Summary** (3-4 lines)
@@ -40,5 +55,6 @@ Transcript:
     summary = response.choices[0].message.content
     return {
         "summary": summary,
-        "transcript": transcript
+        "transcript": transcript,
+        "language": normalized
     }

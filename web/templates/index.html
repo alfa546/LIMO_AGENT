@@ -621,6 +621,62 @@
       margin-bottom: 0.9rem;
     }
 
+    .mini-panel {
+      border: 1px solid #d7e1d3;
+      background: #ffffffbf;
+      border-radius: 14px;
+      padding: 0.75rem;
+      margin-top: 0.8rem;
+    }
+
+    .calendar-list {
+      display: grid;
+      gap: 0.5rem;
+      margin-top: 0.55rem;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 0.15rem;
+    }
+
+    .calendar-item {
+      border: 1px solid #dbe4d7;
+      border-radius: 11px;
+      background: #ffffffcf;
+      padding: 0.55rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.55rem;
+      align-items: center;
+    }
+
+    .calendar-title {
+      margin: 0;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #18241c;
+    }
+
+    .calendar-meta {
+      margin: 0.18rem 0 0;
+      font-size: 0.76rem;
+      color: #4e5b54;
+    }
+
+    .meet-frame-wrap {
+      margin-top: 0.7rem;
+      border: 1px solid #dbe4d7;
+      border-radius: 14px;
+      background: #f9fcf8;
+      overflow: hidden;
+    }
+
+    .meet-frame {
+      width: 100%;
+      height: 330px;
+      border: none;
+      background: #eef5ef;
+    }
+
     .meeting-list {
       display: grid;
       gap: 0.56rem;
@@ -1272,6 +1328,22 @@
             <input id="quick-join-link" class="input" placeholder="Paste any Google Meet, Zoom, Teams, or other meeting link" />
             <button class="btn btn-primary" onclick="openJoinModal()">Join &amp; Record</button>
           </div>
+
+          <div class="mini-panel">
+            <div style="display:flex; justify-content:space-between; gap:.6rem; align-items:center; flex-wrap:wrap;">
+              <div>
+                <h4 class="section-title" style="margin-bottom:.2rem;">Google Calendar Meetings</h4>
+                <p class="subtitle" style="margin:0;">Upcoming meetings detect karo aur one-click auto join run karo.</p>
+              </div>
+              <div style="display:flex; gap:.45rem; flex-wrap:wrap;">
+                <a href="/auth/google" class="btn btn-ghost" style="text-decoration:none; display:inline-flex; align-items:center;">Connect Google</a>
+                <button class="btn btn-ghost" onclick="loadCalendarMeetings()">Sync Calendar</button>
+              </div>
+            </div>
+            <div id="calendar-meeting-list" class="calendar-list">
+              <div class="instruction" style="margin:0;">Google connect karke Sync Calendar pe click karein.</div>
+            </div>
+          </div>
         </section>
 
         <section id="tab-integrations" class="content-panel hidden">
@@ -1326,14 +1398,38 @@
 
           <div class="split">
             <div>
-              <div class="instruction"><strong>Step 1:</strong> Open your meeting link in another tab and join the call.</div>
-              <div class="instruction"><strong>Step 2:</strong> Use Start Recording and allow tab/system audio capture.</div>
-              <div class="instruction"><strong>Step 3:</strong> Stop recording, then Get Summary for AI notes.</div>
+              <div class="instruction"><strong>Step 1:</strong> Meeting link load karo. Google Meet iframe kuch browsers me block ho sakta hai, us surat me Open in New Tab use karo.</div>
+              <div class="instruction"><strong>Step 2:</strong> Start Recording karo. Live chunks transcribe hote rahenge for smart notes.</div>
+              <div class="instruction"><strong>Step 3:</strong> Summary language choose karo aur Get Summary se final notes nikalo.</div>
+
+              <div class="join-row" style="margin-top:.55rem; margin-bottom:.35rem;">
+                <input id="room-meet-link" class="input" placeholder="https://meet.google.com/..." />
+                <button class="btn btn-ghost" onclick="loadMeetInBrowser()">Load Meeting</button>
+              </div>
+
+              <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.35rem;">
+                <button class="btn btn-ghost" onclick="openMeetInNewTab()">Open in New Tab</button>
+                <span class="badge">No bot setup for in-browser recording mode</span>
+              </div>
+
+              <div class="meet-frame-wrap">
+                <iframe id="room-meet-frame" class="meet-frame" title="Meeting Viewer"></iframe>
+              </div>
 
               <div style="display:flex; gap: .55rem; flex-wrap: wrap; margin-top: .65rem;">
                 <button class="btn btn-primary" onclick="startRoomRecording()">Start Recording</button>
                 <button class="btn btn-ghost" onclick="stopRoomRecording()">Stop Recording</button>
                 <button class="btn btn-ghost" onclick="getRoomSummary()">Get Summary</button>
+              </div>
+
+              <div class="field" style="margin-top:.55rem; margin-bottom:.25rem;">
+                <label class="label" for="room-language">Summary Language</label>
+                <select id="room-language" class="input">
+                  <option value="auto">Auto (detect)</option>
+                  <option value="english">English</option>
+                  <option value="urdu">Urdu (Roman Urdu)</option>
+                  <option value="hindi">Hindi</option>
+                </select>
               </div>
 
               <div style="display:flex; gap:.55rem; flex-wrap:wrap; margin-top:.65rem;">
@@ -1621,6 +1717,7 @@
       dashboardTab: "overview",
       user: null,
       meetings: [],
+      calendarMeetings: [],
       platformStatus: {},
       connectKey: null,
       roomTab: "transcript",
@@ -1630,6 +1727,7 @@
       roomBlob: null,
       roomTranscript: "",
       roomSummary: "",
+      roomChunkInFlight: false,
       refreshInterval: null
     };
 
@@ -1809,6 +1907,17 @@
       if (tab === "summaries") {
         renderSummaries();
       }
+      if (tab === "overview") {
+        loadCalendarMeetings(false);
+      }
+    }
+
+    function formatDateTime(value) {
+      if (!value) {
+        return "Time unavailable";
+      }
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString();
     }
 
     function getMeetingPlatformIcon(platform) {
@@ -2150,6 +2259,96 @@
       }
     }
 
+    function renderCalendarMeetings() {
+      const host = document.getElementById("calendar-meeting-list");
+      if (!host) {
+        return;
+      }
+
+      if (!state.calendarMeetings.length) {
+        host.innerHTML = '<div class="instruction" style="margin:0;">No upcoming calendar meetings with links found.</div>';
+        return;
+      }
+
+      host.innerHTML = state.calendarMeetings.map((meeting) => {
+        const safeLink = encodeURIComponent(meeting.link || "");
+        return `
+          <article class="calendar-item">
+            <div>
+              <p class="calendar-title">${escapeHtml(meeting.title || "Untitled meeting")}</p>
+              <p class="calendar-meta">${escapeHtml(formatDateTime(meeting.start))}</p>
+            </div>
+            <div style="display:flex; gap:.35rem; flex-wrap:wrap; justify-content:flex-end;">
+              <button class="btn btn-ghost" style="padding:.34rem .55rem; font-size:.75rem;" onclick="openCalendarMeeting('${safeLink}')">Open</button>
+              <button class="btn btn-primary" style="padding:.34rem .55rem; font-size:.75rem;" onclick="autoJoinCalendarMeeting('${safeLink}')">Auto Join</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function loadCalendarMeetings(showErrors = true) {
+      if (!state.user) {
+        return;
+      }
+      const host = document.getElementById("calendar-meeting-list");
+      if (host) {
+        host.innerHTML = '<div class="instruction" style="margin:0;">Syncing calendar meetings...</div>';
+      }
+      try {
+        const result = await callApi(`/api/calendar/meetings/${encodeURIComponent(state.user.email)}`);
+        state.calendarMeetings = Array.isArray(result.meetings) ? result.meetings : [];
+      } catch (err) {
+        state.calendarMeetings = [];
+        if (host) {
+          host.innerHTML = '<div class="instruction" style="margin:0;">Google Calendar not connected. Connect Google first.</div>';
+        }
+        if (showErrors) {
+          showToast(err.message || "Calendar sync failed.", true);
+        }
+        return;
+      }
+      renderCalendarMeetings();
+    }
+
+    function openCalendarMeeting(encodedLink) {
+      const link = decodeURIComponent(encodedLink || "");
+      if (!link) {
+        return;
+      }
+      const roomInput = document.getElementById("room-meet-link");
+      if (roomInput) {
+        roomInput.value = link;
+      }
+      window.open(link, "_blank", "noopener,noreferrer");
+    }
+
+    async function autoJoinCalendarMeeting(encodedLink) {
+      const link = decodeURIComponent(encodedLink || "");
+      if (!state.user || !link) {
+        return;
+      }
+      try {
+        await callApi("/api/meeting/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            link,
+            user_email: state.user.email,
+            bot_name: "Calendar Auto Bot",
+            bot_email: "",
+            bot_password: ""
+          })
+        });
+        showToast("Calendar meeting auto-join started.");
+        await loadMeetings();
+        renderMeetingHistory();
+        startAutoRefreshIfNeeded();
+      } catch (err) {
+        showToast(err.message || "Auto join failed.", true);
+      }
+    }
+
     function updateMetrics() {
       const connectedCount = Object.values(state.platformStatus).filter(Boolean).length;
       const processingCount = state.meetings.filter((meeting) => !mapMeetingMeta(meeting).ready).length;
@@ -2202,7 +2401,32 @@
       renderMeetingHistory();
       renderSummaries();
       renderIntegrations();
+      loadCalendarMeetings(false);
       startAutoRefreshIfNeeded();
+    }
+
+    function loadMeetInBrowser() {
+      const input = document.getElementById("room-meet-link");
+      const frame = document.getElementById("room-meet-frame");
+      const link = (input?.value || "").trim();
+      if (!link) {
+        showToast("Meeting link required.", true);
+        return;
+      }
+      const fullLink = link.startsWith("http") ? link : `https://${link}`;
+      frame.src = fullLink;
+      showToast("Meeting view loaded. If blocked, use Open in New Tab.");
+    }
+
+    function openMeetInNewTab() {
+      const input = document.getElementById("room-meet-link");
+      const link = (input?.value || "").trim();
+      if (!link) {
+        showToast("Meeting link required.", true);
+        return;
+      }
+      const fullLink = link.startsWith("http") ? link : `https://${link}`;
+      window.open(fullLink, "_blank", "noopener,noreferrer");
     }
 
     function setRoomTab(tab) {
@@ -2229,13 +2453,15 @@
         state.roomBlob = null;
         state.roomTranscript = "";
         state.roomSummary = "";
+        state.roomChunkInFlight = false;
         document.getElementById("room-transcript").textContent = "Recording started...";
         document.getElementById("room-summary").textContent = "Summary panel will appear here.";
 
         state.roomRecorder = new MediaRecorder(state.roomStream, { mimeType: "audio/webm" });
-        state.roomRecorder.ondataavailable = (event) => {
+        state.roomRecorder.ondataavailable = async (event) => {
           if (event.data && event.data.size > 0) {
             state.roomChunks.push(event.data);
+            await transcribeLiveChunk(event.data);
           }
         };
         state.roomRecorder.onstop = async () => {
@@ -2265,7 +2491,30 @@
       state.roomStream = null;
       state.roomRecorder = null;
       setRecordingState(false);
-      showToast("Recording stopped. Transcribing audio...");
+      showToast("Recording stopped. Final transcript processing...");
+    }
+
+    async function transcribeLiveChunk(chunkBlob) {
+      if (!chunkBlob || state.roomChunkInFlight) {
+        return;
+      }
+      state.roomChunkInFlight = true;
+      try {
+        const form = new FormData();
+        form.append("audio", chunkBlob, "live-chunk.webm");
+        const result = await callApi("/api/transcribe", { method: "POST", body: form });
+        const chunkText = (result.transcript || "").trim();
+        if (!chunkText) {
+          return;
+        }
+        if (!state.roomTranscript.includes(chunkText)) {
+          state.roomTranscript = state.roomTranscript ? `${state.roomTranscript}\n${chunkText}` : chunkText;
+          document.getElementById("room-transcript").textContent = state.roomTranscript;
+        }
+      } catch (err) {
+      } finally {
+        state.roomChunkInFlight = false;
+      }
     }
 
     async function transcribeRoomRecording() {
@@ -2283,7 +2532,10 @@
           method: "POST",
           body: form
         });
-        state.roomTranscript = (result.transcript || "").trim();
+        const finalText = (result.transcript || "").trim();
+        if (finalText.length >= state.roomTranscript.length) {
+          state.roomTranscript = finalText;
+        }
         document.getElementById("room-transcript").textContent = state.roomTranscript || "Transcript is empty.";
         setRoomTab("transcript");
       } catch (err) {
@@ -2299,15 +2551,16 @@
       }
       try {
         document.getElementById("room-summary").textContent = "Generating summary...";
+        const language = document.getElementById("room-language")?.value || "auto";
         const result = await callApi("/api/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript: state.roomTranscript })
+          body: JSON.stringify({ transcript: state.roomTranscript, language })
         });
         state.roomSummary = (result.summary || "").trim();
         document.getElementById("room-summary").textContent = state.roomSummary || "No summary returned.";
         setRoomTab("summary");
-        showToast("Summary generated.");
+        showToast(`Summary generated (${result.language || language}).`);
       } catch (err) {
         document.getElementById("room-summary").textContent = "Summary generation failed.";
         showToast(err.message || "Summary failed", true);
