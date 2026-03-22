@@ -1540,7 +1540,7 @@
 
               <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.35rem;">
                 <button class="btn btn-ghost" onclick="openMeetInNewTab()">Open in New Tab</button>
-                <span class="badge">No bot setup for in-browser recording mode</span>
+                <span class="badge">In-browser mode: bot setup required nahi</span>
               </div>
 
               <div class="meet-frame-wrap">
@@ -1870,11 +1870,14 @@
       roomTab: "transcript",
       roomRecorder: null,
       roomStream: null,
+      roomMicStream: null,
       roomChunks: [],
       roomBlob: null,
       roomTranscript: "",
       roomSummary: "",
       roomChunkInFlight: false,
+      roomDataFlushTimer: null,
+      roomRecordingStartedAt: 0,
       selectedAnalyticsMeetingId: null,
       refreshInterval: null
     };
@@ -2744,6 +2747,26 @@
       document.getElementById("recording-state").classList.toggle("hidden", !active);
     }
 
+    function createRoomRecorder(stream) {
+      const mimeCandidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        ""
+      ];
+
+      for (const mimeType of mimeCandidates) {
+        try {
+          if (mimeType && !MediaRecorder.isTypeSupported(mimeType)) {
+            continue;
+          }
+          return mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        } catch (err) {
+        }
+      }
+      return new MediaRecorder(stream);
+    }
+
     async function startRoomRecording() {
       if (state.roomRecorder) {
         showToast("Recording is already in progress.", true);
@@ -2751,16 +2774,37 @@
       }
 
       try {
-        state.roomStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        // Mic-first recording is the most reliable path across browsers.
+        state.roomMicStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+
+        let mergedStream = state.roomMicStream;
+        try {
+          // Optional display capture for users who want screen + tab context.
+          state.roomStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          const displayTracks = state.roomStream.getTracks();
+          const micTracks = state.roomMicStream.getAudioTracks();
+          mergedStream = new MediaStream([...displayTracks, ...micTracks]);
+        } catch (displayErr) {
+          // Continue with mic-only stream when display capture is skipped/blocked.
+          state.roomStream = null;
+        }
+
         state.roomChunks = [];
         state.roomBlob = null;
         state.roomTranscript = "";
         state.roomSummary = "";
         state.roomChunkInFlight = false;
+        state.roomRecordingStartedAt = Date.now();
         document.getElementById("room-transcript").textContent = "Recording started...";
         document.getElementById("room-summary").textContent = "Summary panel will appear here.";
 
-        state.roomRecorder = new MediaRecorder(state.roomStream, { mimeType: "audio/webm" });
+        state.roomRecorder = createRoomRecorder(mergedStream);
         state.roomRecorder.ondataavailable = async (event) => {
           if (event.data && event.data.size > 0) {
             state.roomChunks.push(event.data);
@@ -2768,14 +2812,26 @@
           }
         };
         state.roomRecorder.onstop = async () => {
+          if (state.roomDataFlushTimer) {
+            clearInterval(state.roomDataFlushTimer);
+            state.roomDataFlushTimer = null;
+          }
           await transcribeRoomRecording();
         };
 
-        state.roomRecorder.start(3000);
+        state.roomRecorder.start(1000);
+        state.roomDataFlushTimer = setInterval(() => {
+          try {
+            if (state.roomRecorder && state.roomRecorder.state === "recording") {
+              state.roomRecorder.requestData();
+            }
+          } catch (err) {
+          }
+        }, 1200);
         setRecordingState(true);
-        showToast("Recording started. Share tab or screen with audio enabled.");
+        showToast("Recording started. Mic se 5-10 sec bolen, phir stop karein.");
       } catch (err) {
-        showToast("Recording permission denied or unavailable.", true);
+        showToast("Microphone permission required. Browser me mic allow karein.", true);
       }
     }
 
@@ -2784,15 +2840,39 @@
         showToast("No active recording.", true);
         return;
       }
+
+      const elapsed = Date.now() - (state.roomRecordingStartedAt || Date.now());
+      if (elapsed < 1200) {
+        showToast("Recording bohat jaldi stop hui. Kam az kam 3-5 sec bol kar stop karein.", true);
+      }
+
       try {
+        if (state.roomRecorder.state === "recording") {
+          try {
+            state.roomRecorder.requestData();
+          } catch (err) {
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
         state.roomRecorder.stop();
       } catch (err) {
       }
+
+      if (state.roomDataFlushTimer) {
+        clearInterval(state.roomDataFlushTimer);
+        state.roomDataFlushTimer = null;
+      }
+
       if (state.roomStream) {
         state.roomStream.getTracks().forEach((track) => track.stop());
       }
+      if (state.roomMicStream) {
+        state.roomMicStream.getTracks().forEach((track) => track.stop());
+      }
       state.roomStream = null;
+      state.roomMicStream = null;
       state.roomRecorder = null;
+      state.roomRecordingStartedAt = 0;
       setRecordingState(false);
       showToast("Recording stopped. Final transcript processing...");
     }
@@ -2822,7 +2902,7 @@
 
     async function transcribeRoomRecording() {
       if (!state.roomChunks.length) {
-        document.getElementById("room-transcript").textContent = "No audio captured.";
+        document.getElementById("room-transcript").textContent = state.roomTranscript || "Recording complete. Speech detect nahi hui. Dobara record karke mic ke paas bolen.";
         return;
       }
 
