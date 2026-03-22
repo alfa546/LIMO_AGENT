@@ -306,22 +306,33 @@
     }
 
     .moving-strip {
+      --track-width: 24ch;
       margin-top: 0.9rem;
       border: 1px solid #d4dfd0;
       border-radius: 12px;
       background: #ffffffc9;
       overflow: hidden;
       white-space: nowrap;
+      padding: 0.02rem 0.35rem;
     }
 
     .moving-track {
-      display: inline-block;
+      display: block;
+      width: var(--track-width);
       padding: 0.5rem 0;
-      font-size: 0.78rem;
+      font-family: "Syne", sans-serif;
+      font-size: 0.92rem;
+      font-style: italic;
       color: #2a3831;
       font-weight: 700;
-      letter-spacing: 0.02em;
-      animation: marqueeText 16s linear infinite;
+      letter-spacing: 0.04em;
+      background: linear-gradient(90deg, #0b7d73 0%, #1778f2 45%, #0b7d73 100%);
+      background-size: 180% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      will-change: transform;
+      animation: edgeRun 2.7s linear infinite, shimmer 4.4s linear infinite;
     }
 
     .pills {
@@ -1067,6 +1078,15 @@
       }
     }
 
+    @keyframes edgeRun {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(calc(100% - var(--track-width)));
+      }
+    }
+
     @keyframes heroBreath {
       0%,
       100% {
@@ -1128,7 +1148,7 @@
           <p class="hero-copy">Join instantly, record reliably, generate AI summaries, and keep every platform connected from one bold control center.</p>
 
           <div class="moving-strip" aria-hidden="true">
-            <div class="moving-track">LIVE TRANSCRIPT STREAMING • SMART SUMMARY ENGINE • AUTO JOIN BOT • MULTI-PLATFORM CONTROL • LIVE TRANSCRIPT STREAMING • SMART SUMMARY ENGINE • AUTO JOIN BOT • MULTI-PLATFORM CONTROL •</div>
+            <div class="moving-track">Smart mind Wins the game</div>
           </div>
 
           <div class="pills">
@@ -1247,13 +1267,11 @@
             </div>
           </div>
 
+          <h4 class="section-title">Quick Join</h4>
           <div class="join-row">
             <input id="quick-join-link" class="input" placeholder="Paste any Google Meet, Zoom, Teams, or other meeting link" />
             <button class="btn btn-primary" onclick="openJoinModal()">Join &amp; Record</button>
           </div>
-
-          <h4 class="section-title">Recent Meetings</h4>
-          <div id="overview-recent" class="meeting-list"></div>
         </section>
 
         <section id="tab-integrations" class="content-panel hidden">
@@ -1825,6 +1843,9 @@
 
     function renderOverviewRecent() {
       const host = document.getElementById("overview-recent");
+      if (!host) {
+        return;
+      }
       if (!state.meetings.length) {
         host.innerHTML = '<div class="instruction">No meetings yet. Start with Quick Join and launch your first recording.</div>';
         return;
