@@ -28,31 +28,22 @@ def get_gmail_service():
     return build('gmail', 'v1', credentials=creds)
 
 
-def extract_meeting_links(text):
-    links = {}
-    meet = re.findall(r'https://meet\.google\.com/[a-z0-9\-]+', text)
-    if meet:
-        links['google_meet'] = meet[0]
-    zoom = re.findall(r'https://zoom\.us/j/[0-9]+', text)
-    if zoom:
-        links['zoom'] = zoom[0]
-    teams = re.findall(
-        r'https://teams\.microsoft\.com/l/meetup-join/[^\s"<]+', text)
-    if teams:
-        links['teams'] = teams[0]
-    return links
+def _extract_urls(text: str):
+    pattern = r'https?://[^\s"<]+'
+    return re.findall(pattern, text or "")
 
 
-def get_meeting_emails(max_results=10):
+def get_recent_important_emails(max_results=10):
     service = get_gmail_service()
-    query = "subject:(meeting OR invite OR join) newer_than:1d"
+    query = "newer_than:2d (is:important OR category:primary)"
     results = service.users().messages().list(
         userId='me',
         q=query,
         maxResults=max_results
     ).execute()
     messages = results.get('messages', [])
-    meeting_emails = []
+    email_items = []
+
     for msg in messages:
         msg_data = service.users().messages().get(
             userId='me',
@@ -77,11 +68,19 @@ def get_meeting_emails(max_results=10):
                         part['body']['data']
                     ).decode('utf-8')
                     break
-        links = extract_meeting_links(subject + " " + body)
-        if links:
-            meeting_emails.append({
-                'subject': subject,
-                'from': sender,
-                'links': links
-            })
-    return meeting_emails
+
+        all_text = f"{subject}\n{body}".strip()
+        links = _extract_urls(all_text)
+        email_items.append({
+            'subject': subject,
+            'from': sender,
+            'snippet': (body[:280] + '...') if len(body) > 280 else body,
+            'links': links[:5],
+        })
+
+    return email_items
+
+
+def get_meeting_emails(max_results=10):
+    """Backward-compatible alias. Returns important emails, not meeting-only items."""
+    return get_recent_important_emails(max_results=max_results)
