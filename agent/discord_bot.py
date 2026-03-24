@@ -47,7 +47,11 @@ def _build_welcome_dm(member: discord.Member) -> str:
 
 @bot.event
 async def on_ready():
-    print(f"Bot online: {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"Bot online: {bot.user} | Slash commands synced: {len(synced)}")
+    except Exception as exc:
+        print(f"Bot online: {bot.user} | Slash sync failed: {exc}")
 
 
 @bot.event
@@ -126,6 +130,11 @@ Commands:
 async def ping(ctx):
     """!ping - Bot online status"""
     await ctx.send("Bot online hai. Channel mode active.")
+
+
+@bot.tree.command(name="ping", description="Bot status check")
+async def slash_ping(interaction: discord.Interaction):
+    await interaction.response.send_message("Bot online hai. Channel mode active.")
 
 
 if __name__ == "__main__":
