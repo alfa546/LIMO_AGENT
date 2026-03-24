@@ -1,4 +1,4 @@
-# Channel Agent Hub (Discord + Gmail + WhatsApp)
+# LIMO_AGENT (Discord + Gmail + WhatsApp)
 
 This project has been cleaned from meeting platform features and now focuses on three channels only:
 
@@ -32,7 +32,7 @@ Current scope:
 ## Project Structure
 
 ```text
-Meeting-Agents-Discord-teams-zoom/
+LIMO_AGENT/
 ├── main.py                    # FastAPI backend (channel-focused)
 ├── scheduler.py               # In-memory reminder scheduler
 ├── requirements.txt           # Clean dependency set
@@ -62,8 +62,8 @@ Meeting-Agents-Discord-teams-zoom/
 ### 1. Clone and enter directory
 
 ```bash
-git clone https://github.com/alfa546/Meeting-Agents-Discord-teams-zoom.git
-cd Meeting-Agents-Discord-teams-zoom
+git clone https://github.com/alfa546/LIMO_AGENT.git
+cd LIMO_AGENT
 ```
 
 ### 2. Create and activate virtualenv

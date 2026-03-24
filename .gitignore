@@ -9,3 +9,4 @@ venv/
 credentials.json
 token.json
 meetingagent.db
+LIMO_AGENT/
