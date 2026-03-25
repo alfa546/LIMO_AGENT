@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from typing import Dict, List
 
@@ -23,8 +24,89 @@ SYSTEM_PROMPT = (
     "Answer clearly, accurately, and with practical steps when useful."
 )
 
-# Simple in-memory chat store: {session_id: [{role, content, at}]}
+# Data directory for persistent storage
+DATA_DIR = "data"
+CHATS_FILE = os.path.join(DATA_DIR, "chats.json")
+RECENT_FILE = os.path.join(DATA_DIR, "recent.json")
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# In-memory chat store: {session_id: [{role, content, at}]}
 CHAT_SESSIONS: Dict[str, List[dict]] = {}
+
+
+def _load_chat_data():
+    """Load all chat data from disk into memory"""
+    global CHAT_SESSIONS
+    if os.path.exists(CHATS_FILE):
+        try:
+            with open(CHATS_FILE, 'r') as f:
+                CHAT_SESSIONS = json.load(f)
+        except Exception:
+            CHAT_SESSIONS = {}
+
+
+def _save_chat_data():
+    """Save current chat sessions to disk"""
+    try:
+        with open(CHATS_FILE, 'w') as f:
+            json.dump(CHAT_SESSIONS, f, indent=2)
+    except Exception:
+        pass
+
+
+def _load_recent_chats():
+    """Load recent chats metadata from disk"""
+    if os.path.exists(RECENT_FILE):
+        try:
+            with open(RECENT_FILE, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_recent_chats(recent: dict):
+    """Save recent chats metadata to disk"""
+    try:
+        with open(RECENT_FILE, 'w') as f:
+            json.dump(recent, f, indent=2)
+    except Exception:
+        pass
+
+
+def _get_chat_title(session_id: str) -> str:
+    """Get or generate title for a chat session"""
+    recent = _load_recent_chats()
+    if session_id in recent and 'title' in recent[session_id]:
+        return recent[session_id]['title']
+    
+    # Generate title from first user message
+    history = CHAT_SESSIONS.get(session_id, [])
+    for msg in history:
+        if msg.get('role') == 'user':
+            title = msg.get('content', 'Chat')[:50]
+            recent[session_id] = {
+                'title': title,
+                'created_at': datetime.utcnow().isoformat() + 'Z',
+                'updated_at': datetime.utcnow().isoformat() + 'Z'
+            }
+            _save_recent_chats(recent)
+            return title
+    return 'New Chat'
+
+
+def _update_chat_activity(session_id: str):
+    """Update the last activity timestamp for a chat"""
+    recent = _load_recent_chats()
+    if session_id not in recent:
+        recent[session_id] = {
+            'title': _get_chat_title(session_id),
+            'created_at': datetime.utcnow().isoformat() + 'Z'
+        }
+    recent[session_id]['updated_at'] = datetime.utcnow().isoformat() + 'Z'
+    _save_recent_chats(recent)
 
 
 class ChatRequest(BaseModel):
@@ -57,11 +139,14 @@ def _local_fallback(user_message: str) -> str:
 def _chat_completion(session_id: str, user_message: str) -> str:
     history = CHAT_SESSIONS.setdefault(session_id, [])
     history.append({"role": "user", "content": user_message, "at": datetime.utcnow().isoformat() + "Z"})
+    _save_chat_data()
 
     client = _get_client()
     if client is None:
         answer = _local_fallback(user_message)
         history.append({"role": "assistant", "content": answer, "at": datetime.utcnow().isoformat() + "Z"})
+        _save_chat_data()
+        _update_chat_activity(session_id)
         return answer
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -80,6 +165,8 @@ def _chat_completion(session_id: str, user_message: str) -> str:
         answer = _local_fallback(user_message)
 
     history.append({"role": "assistant", "content": answer, "at": datetime.utcnow().isoformat() + "Z"})
+    _save_chat_data()
+    _update_chat_activity(session_id)
     return answer
 
 
@@ -113,5 +200,39 @@ async def session_history(payload: SessionRequest):
 
 @app.post("/api/session/clear")
 async def session_clear(payload: SessionRequest):
-    CHAT_SESSIONS.pop(payload.session_id.strip(), None)
-    return {"success": True, "session_id": payload.session_id}
+    session_id = payload.session_id.strip()
+    CHAT_SESSIONS.pop(session_id, None)
+    _save_chat_data()
+    
+    # Also remove from recent chats
+    recent = _load_recent_chats()
+    recent.pop(session_id, None)
+    _save_recent_chats(recent)
+    
+    return {"success": True, "session_id": session_id}
+
+
+@app.post("/api/recent-chats")
+async def get_recent_chats():
+    """Get list of recent chats sorted by most recent first"""
+    recent = _load_recent_chats()
+    
+    # Sort by updated_at descending
+    sorted_chats = sorted(
+        recent.items(),
+        key=lambda x: x[1].get('updated_at', ''),
+        reverse=True
+    )
+    
+    # Return as list of dicts with session_id included
+    result = [
+        {
+            'session_id': session_id,
+            'title': data.get('title', 'Chat'),
+            'created_at': data.get('created_at'),
+            'updated_at': data.get('updated_at')
+        }
+        for session_id, data in sorted_chats
+    ]
+    
+    return {"chats": result}
