@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
   <style>
     * {
       margin: 0;
@@ -277,6 +278,120 @@
       border-radius: 12px;
       line-height: 1.6;
       word-wrap: break-word;
+      overflow-x: auto;
+    }
+
+    .message-content p {
+      margin: 8px 0;
+    }
+
+    .message-content h1,
+    .message-content h2,
+    .message-content h3 {
+      margin: 12px 0 8px 0;
+      font-weight: 600;
+    }
+
+    .message-content h1 { font-size: 20px; }
+    .message-content h2 { font-size: 18px; }
+    .message-content h3 { font-size: 16px; }
+
+    .message-content ul,
+    .message-content ol {
+      margin: 8px 0 8px 20px;
+    }
+
+    .message-content li {
+      margin: 4px 0;
+    }
+
+    .message-content code {
+      background: rgba(0, 0, 0, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+    }
+
+    .message-content pre {
+      background: #f5f5f5;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 8px 0;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .message-content pre code {
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      font-size: 12px;
+      display: block;
+    }
+
+    .code-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #eaeaea;
+      padding: 8px 12px;
+      border-radius: 8px 8px 0 0;
+      border-bottom: 1px solid #d1d5db;
+      font-size: 12px;
+      color: #565656;
+      margin-bottom: 0;
+    }
+
+    .code-block-language {
+      font-weight: 600;
+    }
+
+    .copy-btn {
+      background: #f0f0f0;
+      border: 1px solid #d1d5db;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: #e5e5e5;
+    }
+
+    .copy-btn.copied {
+      background: #10a37f;
+      color: white;
+      border-color: #10a37f;
+    }
+
+    .message-content blockquote {
+      border-left: 4px solid #d1d5db;
+      padding-left: 12px;
+      margin: 8px 0;
+      opacity: 0.8;
+      font-style: italic;
+    }
+
+    .message-content strong {
+      font-weight: 600;
+    }
+
+    .message-content em {
+      font-style: italic;
+    }
+
+    .message-content a {
+      color: #10a37f;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .message-content a:hover {
+      text-decoration: underline;
     }
 
     .message.ai .message-content {
@@ -287,6 +402,14 @@
     .message.user .message-content {
       background: #10a37f;
       color: white;
+    }
+
+    .message.user .message-content code {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .message.user .message-content a {
+      color: #e0f7f4;
     }
 
     @keyframes slideIn {
@@ -502,6 +625,17 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>
+    // Configure marked for better markdown rendering
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      pedantic: false
+    });
+  </script>
   <script>
     let sessionId = localStorage.getItem('limo_session_id');
     if (!sessionId) {
@@ -558,7 +692,60 @@
 
       const contentDiv = document.createElement('div');
       contentDiv.className = 'message-content';
-      contentDiv.textContent = content;
+
+      if (role === 'user') {
+        // User messages: plain text only
+        contentDiv.textContent = content;
+      } else {
+        // AI messages: parse markdown
+        const markdown = marked.parse(content);
+        const clean = DOMPurify.sanitize(markdown);
+        contentDiv.innerHTML = clean;
+        
+        // Add copy buttons to code blocks
+        contentDiv.querySelectorAll('pre').forEach((pre, index) => {
+          const codeBlock = pre.querySelector('code');
+          if (codeBlock) {
+            const language = codeBlock.className.replace('language-', '') || 'text';
+            
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'code-block-header';
+            header.innerHTML = `
+              <span class="code-block-language">${language}</span>
+              <button class="copy-btn" data-index="${index}">Copy</button>
+            `;
+            
+            pre.insertBefore(header, codeBlock);
+            pre.style.padding = '0';
+            pre.style.paddingBottom = '12px';
+            
+            // Highlight code
+            hljs.highlightElement(codeBlock);
+          }
+        });
+        
+        // Add click handlers for copy buttons
+        contentDiv.querySelectorAll('.copy-btn').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pre = this.closest('pre');
+            const code = pre.querySelector('code');
+            const text = code.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+              const originalText = this.textContent;
+              this.textContent = '✓ Copied';
+              this.classList.add('copied');
+              
+              setTimeout(() => {
+                this.textContent = originalText;
+                this.classList.remove('copied');
+              }, 2000);
+            });
+          });
+        });
+      }
 
       if (role === 'user') {
         messageDiv.appendChild(contentDiv);
