@@ -3,7 +3,7 @@
 LIMO Agent is a web-based AI chatbot similar to GPT.
 
 This project is now focused only on chatbot functionality.
-All old integrations such as Discord, Gmail, WhatsApp, transcription, and platform connectors have been removed from scope.
+
 
 ## What LIMO Agent Does
 
