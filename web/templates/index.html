@@ -3,248 +3,571 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LIMO Agent | AI Chatbot</title>
+  <title>LIMO Agent | Next Generation Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Sora:wght@300;400;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f4efe4;
-      --ink: #1c1712;
-      --muted: #5f5547;
-      --line: #d8ceb9;
-      --panel: #fffdf8;
-      --accent: #0d8a73;
-      --accent2: #ea6b20;
+      --primary: #0d8a73;
+      --primary-light: #0ea5a0;
+      --secondary: #ea6b20;
+      --dark: #0a0a0a;
+      --light: #f8f7f5;
+      --accent: #ffd60a;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     body {
-      margin: 0;
-      font-family: "Plus Jakarta Sans", sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 8% 10%, #ffe2b6, transparent 38%),
-        radial-gradient(circle at 90% 12%, #bcecdc, transparent 34%),
-        linear-gradient(160deg, #f4efe4 0%, #f8f3e8 50%, #efe6d8 100%);
+      font-family: "Sora", sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0d0d0d 100%);
+      color: #e0e0e0;
       min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
     }
 
-    .wrap {
-      max-width: 1100px;
+    /* Animated Background */
+    .background-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.1;
+      filter: blur(80px);
+      animation: float 15s infinite ease-in-out;
+    }
+
+    .orb:nth-child(1) {
+      width: 300px;
+      height: 300px;
+      background: linear-gradient(135deg, #0d8a73, #0ea5a0);
+      top: -10%;
+      left: -5%;
+      animation-delay: 0s;
+    }
+
+    .orb:nth-child(2) {
+      width: 250px;
+      height: 250px;
+      background: linear-gradient(135deg, #ea6b20, #f59d3d);
+      top: 40%;
+      right: -10%;
+      animation-delay: 3s;
+    }
+
+    .orb:nth-child(3) {
+      width: 200px;
+      height: 200px;
+      background: linear-gradient(135deg, #ffd60a, #ffb703);
+      bottom: 10%;
+      left: 15%;
+      animation-delay: 6s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(20px, 30px); }
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 1rem;
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
     }
 
-    .hero {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: var(--panel);
-      padding: 1rem;
-      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.07);
-      animation: rise .45s ease;
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 4rem;
+      animation: fadeInDown 1s ease;
     }
 
-    .pill {
+    .logo {
       display: inline-block;
-      border: 1px solid #bcecdc;
-      background: #ebfaf5;
-      color: #1f7a5e;
-      border-radius: 999px;
-      padding: .2rem .7rem;
-      font-size: .73rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-    }
-
-    h1 {
-      margin: .55rem 0 .2rem;
       font-family: "Space Grotesk", sans-serif;
-      font-size: clamp(1.7rem, 4vw, 2.7rem);
-      letter-spacing: -.03em;
-      line-height: 1.05;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      letter-spacing: -1px;
     }
 
-    .sub {
-      margin: 0;
-      color: var(--muted);
-      max-width: 68ch;
-      line-height: 1.5;
+    .greeting {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #fff;
+      margin-bottom: 1rem;
+      font-family: "Playfair Display", serif;
     }
 
-    .chat-shell {
-      margin-top: 1rem;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: var(--panel);
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
-      overflow: hidden;
-      animation: rise .5s ease;
-    }
-
-    .toolbar {
-      display: flex;
-      gap: .6rem;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      padding: .8rem;
-      border-bottom: 1px solid var(--line);
-      background: #fff9ef;
-    }
-
-    .session {
-      font-size: .82rem;
-      color: #6b5f4f;
+    .greeting-urdu {
+      font-size: 2.8rem;
+      color: var(--primary-light);
+      margin-bottom: 2rem;
       font-weight: 700;
     }
 
-    .btn {
-      border: 1px solid transparent;
-      border-radius: 10px;
-      padding: .48rem .72rem;
-      font-family: inherit;
-      font-size: .84rem;
-      font-weight: 800;
+    .subtitle {
+      font-size: 1.2rem;
+      color: #a0a0a0;
+      max-width: 700px;
+      margin: 0 auto 2rem;
+      line-height: 1.6;
+    }
+
+    /* Quote Section */
+    .quote-section {
+      background: rgba(13, 138, 115, 0.1);
+      border: 1px solid rgba(13, 138, 115, 0.3);
+      border-radius: 20px;
+      padding: 3rem;
+      margin: 3rem 0;
+      backdrop-filter: blur(10px);
+      animation: fadeInUp 1s ease 0.3s backwards;
+    }
+
+    .quote-text {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffd60a;
+      font-style: italic;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+      font-family: "Playfair Display", serif;
+    }
+
+    .quote-author {
+      font-size: 1rem;
+      color: #a0a0a0;
+      text-align: right;
+    }
+
+    /* Feature Cards */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(13, 138, 115, 0.3);
+      border-radius: 15px;
+      padding: 2rem;
+      backdrop-filter: blur(10px);
+      transition: all 0.4s ease;
+      animation: fadeInUp 1s ease backwards;
       cursor: pointer;
+      position: relative;
+      overflow: hidden;
     }
 
-    .btn-primary {
-      color: #fff;
-      background: linear-gradient(120deg, var(--accent), #0ea5a0);
+    .card:nth-child(1) { animation-delay: 0.5s; }
+    .card:nth-child(2) { animation-delay: 0.7s; }
+    .card:nth-child(3) { animation-delay: 0.9s; }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transform: rotate(45deg);
+      animation: shimmer 3s infinite;
     }
 
-    .btn-warm {
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    .card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
       color: #fff;
-      background: linear-gradient(120deg, var(--accent2), #f59d3d);
+    }
+
+    .card-desc {
+      color: #a0a0a0;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .card:hover {
+      background: rgba(13, 138, 115, 0.2);
+      border-color: var(--primary-light);
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(13, 138, 115, 0.2);
+    }
+
+    /* CTA Button */
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+      padding: 1.2rem 3rem;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      animation: bounce 2s infinite;
+    }
+
+    .cta-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 20px 40px rgba(13, 138, 115, 0.4);
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.3s ease;
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      padding: 2rem;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      font-size: 1.8rem;
+      margin: 0;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .close-btn:hover {
+      transform: rotate(90deg);
     }
 
     .messages {
-      height: 58vh;
-      min-height: 360px;
-      overflow: auto;
-      padding: .9rem;
-      display: grid;
-      gap: .55rem;
-      background: linear-gradient(180deg, #fffcf6 0%, #fff9ef 100%);
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      background: linear-gradient(180deg, rgba(13, 138, 115, 0.05) 0%, transparent 100%);
     }
 
-    .msg {
-      max-width: 80%;
-      padding: .62rem .72rem;
-      border-radius: 14px;
-      font-size: .92rem;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      animation: pop .22s ease;
+    .message {
+      display: flex;
+      gap: 1rem;
+      animation: fadeInUp 0.3s ease;
     }
 
-    .msg-user {
-      justify-self: end;
-      background: #e6fbf4;
-      border: 1px solid #bcecdc;
+    .message.user {
+      justify-content: flex-end;
     }
 
-    .msg-ai {
-      justify-self: start;
-      background: #fff;
-      border: 1px solid #e1d6c6;
+    .message-content {
+      max-width: 60%;
+      padding: 1rem;
+      border-radius: 15px;
+      line-height: 1.6;
     }
 
-    .composer {
-      border-top: 1px solid var(--line);
-      padding: .75rem;
-      background: #fff9ef;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: .6rem;
+    .message.ai .message-content {
+      background: rgba(13, 138, 115, 0.2);
+      border: 1px solid rgba(13, 138, 115, 0.5);
+      color: #e0e0e0;
     }
 
-    textarea {
-      width: 100%;
-      min-height: 70px;
-      max-height: 180px;
-      resize: vertical;
-      border: 1px solid #d9cebb;
-      border-radius: 12px;
-      padding: .62rem .72rem;
+    .message.user .message-content {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+    }
+
+    .chat-input {
+      padding: 2rem;
+      border-top: 1px solid rgba(13, 138, 115, 0.3);
+      display: flex;
+      gap: 1rem;
+    }
+
+    .chat-input textarea {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(13, 138, 115, 0.3);
+      border-radius: 10px;
+      padding: 1rem;
+      color: #fff;
       font-family: inherit;
-      font-size: .92rem;
-      background: #fffef9;
+      resize: none;
+      min-height: 50px;
+      max-height: 100px;
     }
 
-    .note {
-      margin-top: .55rem;
-      font-size: .78rem;
-      color: #706451;
+    .chat-input textarea::placeholder {
+      color: #666;
     }
 
-    @keyframes rise {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+    .chat-input button {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 1rem 2rem;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.3s ease;
     }
 
-    @keyframes pop {
-      from { opacity: 0; transform: scale(.98); }
-      to { opacity: 1; transform: scale(1); }
+    .chat-input button:hover {
+      transform: scale(1.05);
     }
 
-    @media (max-width: 700px) {
-      .messages { height: 62vh; }
-      .msg { max-width: 92%; }
-      .composer { grid-template-columns: 1fr; }
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 3rem 0;
+      border-top: 1px solid rgba(13, 138, 115, 0.3);
+      margin-top: 3rem;
+      color: #a0a0a0;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .greeting {
+        font-size: 2.5rem;
+      }
+      .greeting-urdu {
+        font-size: 2rem;
+      }
+      .quote-text {
+        font-size: 1.5rem;
+      }
+      .container {
+        padding: 1rem;
+      }
     }
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <section class="hero">
-      <span class="pill">LIMO Agent</span>
-      <h1>AI Chatbot Like GPT</h1>
-      <p class="sub">Yeh app sirf chatbot ke liye hai. Discord, Gmail, aur baqi integrations remove kar di gayi hain. Apni website par embed/open karke users chat kar sakte hain.</p>
-      <p class="note">Tip: GROQ_API_KEY set ho to advanced model response milega. Key na ho to local fallback reply chalta rahega.</p>
+  <!-- Background Animation -->
+  <div class="background-animation">
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo">⚡ LIMO AGENT</div>
+      <h1 class="greeting">Welcome to Intelligence</h1>
+      <p class="greeting-urdu">السلام و علیکم۔ میں LIMO ایجنٹ ہوں۔ آپ کیسے مدد چاہتے ہیں؟</p>
+      <p class="subtitle">Next-generation AI assistant powered by advanced intelligence and continuous learning</p>
+    </header>
+
+    <!-- Quote Section -->
+    <section class="quote-section">
+      <p class="quote-text">"The future belongs to those who believe in the beauty of their dreams and have the courage to pursue them with unwavering determination."</p>
+      <p class="quote-author">—Eleanor Roosevelt</p>
     </section>
 
-    <section class="chat-shell">
-      <div class="toolbar">
-        <div class="session">Session: <span id="sessionId"></span></div>
-        <div>
-          <button id="refreshBtn" class="btn btn-warm">Reload History</button>
-          <button id="clearBtn" class="btn btn-warm">Clear Chat</button>
-        </div>
+    <!-- Feature Cards -->
+    <section class="features">
+      <div class="card" onclick="openChat()">
+        <span class="card-icon">💬</span>
+        <h3 class="card-title">Smart Chat</h3>
+        <p class="card-desc">Experience intelligent conversations with contextual understanding and personalized responses.</p>
       </div>
 
+      <div class="card" onclick="openChat()">
+        <span class="card-icon">🤖</span>
+        <h3 class="card-title">AI Assistant</h3>
+        <p class="card-desc">Get instant help with your queries, tasks, and complex problems - available 24/7.</p>
+      </div>
+
+      <div class="card" onclick="openChat()">
+        <span class="card-icon">⚙️</span>
+        <h3 class="card-title">Smart Automation</h3>
+        <p class="card-desc">Automate your workflow and boost productivity with intelligent task management.</p>
+      </div>
+    </section>
+
+    <!-- Inspirational Quote 2 -->
+    <section class="quote-section" style="margin-top: 4rem;">
+      <p class="quote-text">"Success is not final, failure is not fatal: it is the courage to continue that counts."</p>
+      <p class="quote-author">—Winston Churchill</p>
+    </section>
+
+    <!-- CTA -->
+    <div style="text-align: center; margin: 3rem 0;">
+      <button class="cta-button" onclick="openChat()">Start Conversation Now</button>
+    </div>
+
+    <!-- Quote 3 -->
+    <section class="quote-section" style="margin-top: 4rem;">
+      <p class="quote-text">"The only way to do great work is to love what you do, and to push the boundaries of what is possible."</p>
+      <p class="quote-author">—Steve Jobs</p>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>© 2025 LIMO Agent. Powered by advanced AI intelligence. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <!-- Chat Modal -->
+  <div id="chatModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>💬 LIMO Intelligence</h2>
+        <button class="close-btn" onclick="closeChat()">&times;</button>
+      </div>
       <div id="messages" class="messages"></div>
-
-      <div class="composer">
-        <textarea id="prompt" placeholder="Type your message..."></textarea>
-        <button id="sendBtn" class="btn btn-primary">Send</button>
+      <div class="chat-input">
+        <textarea id="prompt" placeholder="Ask me anything..."></textarea>
+        <button id="sendBtn" onclick="sendMessage()">Send</button>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
 
   <script>
-    const messagesEl = document.getElementById('messages');
-    const promptEl = document.getElementById('prompt');
-    const sendBtn = document.getElementById('sendBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const sessionIdEl = document.getElementById('sessionId');
-
     let sessionId = localStorage.getItem('limo_session_id');
     if (!sessionId) {
       sessionId = 'sess_' + Math.random().toString(36).slice(2, 10);
       localStorage.setItem('limo_session_id', sessionId);
     }
-    sessionIdEl.textContent = sessionId;
+
+    const messagesEl = document.getElementById('messages');
+    const promptEl = document.getElementById('prompt');
+    const chatModal = document.getElementById('chatModal');
+
+    function openChat() {
+      chatModal.classList.add('active');
+      loadHistory();
+    }
+
+    function closeChat() {
+      chatModal.classList.remove('active');
+    }
 
     function renderMessage(role, content) {
-      const item = document.createElement('div');
-      item.className = `msg ${role === 'user' ? 'msg-user' : 'msg-ai'}`;
-      item.textContent = content;
-      messagesEl.appendChild(item);
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${role === 'user' ? 'user' : 'ai'}`;
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      contentDiv.textContent = content;
+      messageDiv.appendChild(contentDiv);
+      messagesEl.appendChild(messageDiv);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
@@ -261,12 +584,16 @@
 
     async function loadHistory() {
       messagesEl.innerHTML = '';
-      const data = await api('/api/session/history', { session_id: sessionId });
-      if (!data.history || !data.history.length) {
-        renderMessage('assistant', 'Assalam o Alaikum. Main LIMO Agent hoon. Aap kaise help chahte hain?');
-        return;
+      try {
+        const data = await api('/api/session/history', { session_id: sessionId });
+        if (!data.history || !data.history.length) {
+          renderMessage('ai', 'السلام و علیکم۔ میں LIMO ایجنٹ ہوں۔ آپ کیسے مدد چاہتے ہیں؟');
+          return;
+        }
+        data.history.forEach((m) => renderMessage(m.role, m.content));
+      } catch (e) {
+        renderMessage('ai', 'السلام و علیکم۔ میں LIMO ایجنٹ ہوں۔ آپ کیسے مدد چاہتے ہیں؟');
       }
-      data.history.forEach((m) => renderMessage(m.role, m.content));
     }
 
     async function sendMessage() {
@@ -274,7 +601,7 @@
       if (!text) return;
       promptEl.value = '';
       renderMessage('user', text);
-      renderMessage('assistant', 'Thinking...');
+      renderMessage('ai', 'Thinking...');
 
       try {
         const data = await api('/api/chat', { session_id: sessionId, message: text });
@@ -284,7 +611,7 @@
       }
     }
 
-    sendBtn.addEventListener('click', sendMessage);
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
     promptEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -292,12 +619,10 @@
       }
     });
 
-    clearBtn.addEventListener('click', async () => {
-      await api('/api/session/clear', { session_id: sessionId });
-      await loadHistory();
+    // Close modal on background click
+    chatModal.addEventListener('click', (e) => {
+      if (e.target === chatModal) closeChat();
     });
-
-    refreshBtn.addEventListener('click', loadHistory);
 
     loadHistory();
   </script>
