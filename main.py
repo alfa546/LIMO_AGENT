@@ -118,10 +118,6 @@ class SessionRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=120)
 
 
-class MinutesRequest(BaseModel):
-    session_id: str = Field(min_length=1, max_length=120)
-
-
 def _get_client():
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key or Groq is None:
@@ -172,95 +168,6 @@ def _chat_completion(session_id: str, user_message: str) -> str:
     _save_chat_data()
     _update_chat_activity(session_id)
     return answer
-
-
-def _build_minutes_prompt(conversation: List[dict]) -> str:
-    transcript_lines = []
-    for msg in conversation:
-        role = msg.get("role", "unknown")
-        content = (msg.get("content") or "").strip()
-        if not content:
-            continue
-        transcript_lines.append(f"{role.upper()}: {content}")
-
-    transcript = "\n".join(transcript_lines)
-
-    return (
-        "You are an expert meeting secretary. "
-        "Create concise and structured Smart Minutes from the transcript. "
-        "Respond as strict JSON with keys: summary, key_points, decisions, action_items, risks, next_steps. "
-        "Rules: key_points/decisions/risks/next_steps are arrays of strings. "
-        "action_items is an array of objects with fields owner, task, due_date (or null). "
-        "If data is missing, use 'Unknown' for owner and null for due_date. "
-        "Do not include markdown or extra text.\n\n"
-        f"TRANSCRIPT:\n{transcript}"
-    )
-
-
-def _smart_minutes_fallback(conversation: List[dict]) -> dict:
-    user_msgs = [m.get("content", "") for m in conversation if m.get("role") == "user"]
-    assistant_msgs = [m.get("content", "") for m in conversation if m.get("role") == "assistant"]
-
-    summary_base = " ".join((user_msgs + assistant_msgs)[:2]).strip()
-    if not summary_base:
-        summary_base = "No sufficient discussion available to generate minutes."
-
-    return {
-        "summary": summary_base[:280],
-        "key_points": [
-            "Conversation captured successfully.",
-            "Generate minutes with AI provider for deeper extraction.",
-        ],
-        "decisions": ["No explicit decisions detected."],
-        "action_items": [
-            {"owner": "Unknown", "task": "Review discussion and assign owners.", "due_date": None}
-        ],
-        "risks": ["Potential missing context due to limited transcript structure."],
-        "next_steps": ["Continue discussion with clear owner and deadline statements."],
-    }
-
-
-def _generate_smart_minutes(session_id: str) -> dict:
-    history = CHAT_SESSIONS.get(session_id, [])
-    if not history:
-        return {
-            "summary": "No chat history found for this session.",
-            "key_points": [],
-            "decisions": [],
-            "action_items": [],
-            "risks": [],
-            "next_steps": [],
-        }
-
-    client = _get_client()
-    if client is None:
-        return _smart_minutes_fallback(history)
-
-    minutes_prompt = _build_minutes_prompt(history[-24:])
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "Return valid JSON only."},
-                {"role": "user", "content": minutes_prompt},
-            ],
-            temperature=0.2,
-            max_tokens=900,
-            response_format={"type": "json_object"},
-        )
-        raw = (completion.choices[0].message.content or "").strip()
-        parsed = json.loads(raw)
-
-        return {
-            "summary": parsed.get("summary", ""),
-            "key_points": parsed.get("key_points", []),
-            "decisions": parsed.get("decisions", []),
-            "action_items": parsed.get("action_items", []),
-            "risks": parsed.get("risks", []),
-            "next_steps": parsed.get("next_steps", []),
-        }
-    except Exception:
-        return _smart_minutes_fallback(history)
 
 
 @app.get("/")
@@ -335,10 +242,3 @@ async def get_recent_chats():
     ]
     
     return {"chats": result}
-
-
-@app.post("/api/session/smart-minutes")
-async def session_smart_minutes(payload: MinutesRequest):
-    session_id = payload.session_id.strip()
-    minutes = _generate_smart_minutes(session_id)
-    return {"session_id": session_id, "minutes": minutes}
