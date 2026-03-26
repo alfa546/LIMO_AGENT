@@ -12,6 +12,7 @@ This project is now focused only on chatbot functionality.
 - Uses Groq API when `GROQ_API_KEY` is configured
 - Automatically falls back to local replies if API key is missing
 - Exposes simple API endpoints for chat, chat history, and clear history
+- Adds Smart Minutes generation per session (summary, decisions, action items, risks)
 
 ## Tech Stack
 
@@ -66,6 +67,7 @@ Open: `http://localhost:8000`
 - `POST /api/chat`
 - `POST /api/session/history`
 - `POST /api/session/clear`
+- `POST /api/session/smart-minutes`
 
 ## Example Request
 
