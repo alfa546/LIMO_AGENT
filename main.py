@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 try:
@@ -17,6 +18,7 @@ except Exception:  # pragma: no cover
 load_dotenv()
 
 app = FastAPI(title="LIMO Agent")
+app.mount("/static", StaticFiles(directory="web/static"), name="static")
 templates = Jinja2Templates(directory="web/templates")
 
 SYSTEM_PROMPT = (
