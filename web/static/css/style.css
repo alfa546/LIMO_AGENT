@@ -110,6 +110,11 @@ body {
   margin-bottom: 32px;
   display: flex;
   gap: 16px;
+  animation: slideIn 0.3s ease;
+}
+
+.message.user {
+  justify-content: flex-end;
 }
 
 .message-avatar {
@@ -121,10 +126,11 @@ body {
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
+  background: #30363d;
 }
 
-.message.ai .message-avatar {
-  background: #30363d;
+.message.user .message-avatar {
+  background: #58a6ff;
 }
 
 .message-content {
@@ -132,6 +138,26 @@ body {
   line-height: 1.6;
   font-size: 16px;
   color: #e6edf3;
+  word-wrap: break-word;
+  max-width: 85%;
+}
+
+.message.user .message-content {
+  background: #21262d;
+  border-radius: 8px;
+  padding: 12px 16px;
+  max-width: 70%;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Code Highlighting */
@@ -142,11 +168,79 @@ pre {
   margin: 16px 0;
   overflow-x: auto;
   border: 1px solid #30363d;
+  position: relative;
 }
 
 code {
   font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
   font-size: 14px;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Markdown Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+table th, table td {
+  border: 1px solid #30363d;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+table th {
+  background: #0d1117;
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+/* Markdown Lists */
+.message-content ul, .message-content ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.message-content li {
+  margin: 6px 0;
+}
+
+/* Loading Animation */
+.dot-loader {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.dot-loader::before,
+.dot-loader::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #58a6ff;
+  animation: dotPulse 1.4s infinite;
+}
+
+.dot-loader::before {
+  animation-delay: -0.32s;
+}
+
+.dot-loader::after {
+  animation-delay: -0.16s;
+}
+
+@keyframes dotPulse {
+  0%, 60%, 100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
 }
 
 /* Input Bar - Sticky like Claude/Gemini */

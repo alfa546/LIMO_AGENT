@@ -21,6 +21,7 @@ const sendBtn = document.getElementById('sendBtn');
 const chatHistoryContainer = document.getElementById('chatHistory');
 
 let selectedModel = localStorage.getItem('limo_selected_model') || 'openrouter/elephant-alpha';
+let isLoading = false;
 
 // Auto-resize textarea
 promptEl.addEventListener('input', function() {
@@ -34,6 +35,10 @@ promptEl.addEventListener('keydown', function(e) {
         handleSend(e);
     }
 });
+
+function autoScroll() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
 
 function renderMessage(role, content) {
     const messageDiv = document.createElement('div');
@@ -52,16 +57,53 @@ function renderMessage(role, content) {
         const rawHtml = marked.parse(content);
         contentDiv.innerHTML = DOMPurify.sanitize(rawHtml);
         
-        // Highlight code blocks
-        contentDiv.querySelectorAll('pre code').forEach((block) => {
-            hljs.highlightElement(block);
+        // Highlight code blocks and add copy buttons
+        contentDiv.querySelectorAll('pre').forEach((pre, idx) => {
+            const code = pre.querySelector('code');
+            if (code) {
+                const lang = code.className.replace('language-', '') || 'text';
+                
+                // Create copy button
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-code-btn';
+                copyBtn.innerHTML = '📋 Copy';
+                copyBtn.style.cssText = `
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    color: #e6edf3;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    transition: all 0.2s;
+                `;
+                copyBtn.onmouseover = () => copyBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+                copyBtn.onmouseout = () => copyBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+                
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(code.textContent);
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '✓ Copied';
+                    setTimeout(() => copyBtn.innerHTML = originalText, 2000);
+                };
+                
+                // Wrap pre for positioning
+                pre.style.position = 'relative';
+                pre.style.marginTop = '24px';
+                pre.appendChild(copyBtn);
+                
+                hljs.highlightElement(code);
+            }
         });
     }
 
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(contentDiv);
     chatContainer.appendChild(messageDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    autoScroll();
 }
 
 async function api(path, payload) {
@@ -82,17 +124,23 @@ async function loadHistory() {
         } else {
             chatContainer.innerHTML = '<div class="empty-state"><div class="empty-state-title">How can I help you today?</div></div>';
         }
+        autoScroll();
     } catch (e) {
         console.error("LoadHistory Error:", e);
+        chatContainer.innerHTML = '<div class="empty-state"><div class="empty-state-title">How can I help you today?</div></div>';
     }
 }
 
 async function handleSend(event) {
+    if (isLoading) return;
+    
     const text = promptEl.value.trim();
     if (!text) return;
 
     promptEl.value = '';
     promptEl.style.height = 'auto';
+    sendBtn.disabled = true;
+    isLoading = true;
     
     // Remove empty state
     const empty = chatContainer.querySelector('.empty-state');
@@ -103,19 +151,39 @@ async function handleSend(event) {
     // AI thinking state
     const thinkingId = 'thinking-' + Date.now();
     const thinkingDiv = document.createElement('div');
-    thinkingDiv.className = 'message ai';
+    thinkingDiv.className = 'message ai loading';
     thinkingDiv.id = thinkingId;
-    thinkingDiv.innerHTML = '<div class="message-avatar">🤖</div><div class="message-content">Thinking...</div>';
+    thinkingDiv.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-content">
+            <div style="display: flex; gap: 4px; align-items: center;">
+                <span>Thinking</span>
+                <span class="dot-loader"></span>
+            </div>
+        </div>
+    `;
     chatContainer.appendChild(thinkingDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    autoScroll();
 
     try {
         const data = await api('/api/chat', { session_id: sessionId, message: text, model: selectedModel });
         document.getElementById(thinkingId).remove();
-        renderMessage('ai', data.answer || 'No response');
-        loadRecentChats();
+        renderMessage('ai', data.answer || 'No response received');
+        await loadRecentChats();
     } catch (err) {
-        document.getElementById(thinkingId).innerHTML = '<div class="message-avatar">🤖</div><div class="message-content" style="color: #f85149;">Error connecting to API</div>';
+        const thinkingEl = document.getElementById(thinkingId);
+        if (thinkingEl) {
+            thinkingEl.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content" style="color: #f85149;">
+                    <strong>Error:</strong> ${err.message || 'Failed to get response from API'}
+                </div>
+            `;
+        }
+    } finally {
+        sendBtn.disabled = false;
+        isLoading = false;
+        promptEl.focus();
     }
 }
 
