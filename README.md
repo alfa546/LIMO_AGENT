@@ -1,6 +1,6 @@
 # LIMO Agent - AI Chatbot
 
-LIMO Agent is a web-based AI chatbot similar to GPT.
+LIMO Agent is a web-based AI chatbot related to GPT.
 
 This project is now focused only on chatbot functionality.
 
