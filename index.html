@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIMO AI | Professional Agent Interface</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">L</span>
+                    <span class="logo-text">LIMO AI</span>
+                </div>
+                <button class="icon-btn" id="new-chat-btn" title="New Chat">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+            
+            <nav class="chat-history">
+                <div class="history-group">
+                    <span class="group-label">Recent</span>
+
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">N</div>
+                    <div class="user-info">
+                        <span class="username">Nouman</span>
+                        <span class="plan">Free Plan</span>
+                    </div>
+                </div>
+                <button class="icon-btn" title="Settings">
+                    <i data-lucide="settings"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-nav">
+                <button class="icon-btn menu-toggle" id="menu-toggle">
+                    <i data-lucide="menu"></i>
+                </button>
+                
+                <div class="nav-actions">
+                    <button class="icon-btn" title="Share">
+                        <i data-lucide="share-2"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="chat-container" id="chat-container">
+                <div class="welcome-screen">
+                    <div class="welcome-content">
+                        <h1>How can I help you today?</h1>
+                        <p>Experience the power of multiple free AI models in one professional interface.</p>
+                    </div>
+                </div>
+                <!-- Messages will be injected here -->
+            </div>
+
+            <footer class="input-area">
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <button class="icon-btn" title="Attach file">
+                            <i data-lucide="paperclip"></i>
+                        </button>
+                        <textarea id="user-input" placeholder="Message LIMO AI..." rows="1"></textarea>
+                        <button class="send-btn" id="send-btn">
+                            <i data-lucide="arrow-up"></i>
+                        </button>
+                    </div>
+
+                    <div class="model-selector-container bottom-selector">
+                        <button class="model-selector" id="model-selector-btn">
+                            <span class="model-info">
+                                <span class="model-status"></span>
+                                <span class="current-model">Ring 2.6 (1T) (Free)</span>
+                            </span>
+                            <i data-lucide="chevron-up"></i>
+                        </button>
+                        
+                        <div class="model-dropdown" id="model-dropdown">
+                            <div class="dropdown-search">
+                                <i data-lucide="search"></i>
+                                <input type="text" placeholder="Search models...">
+                            </div>
+                            <div class="model-list" id="dynamic-model-list">
+                                <!-- Models will be injected here by script.js -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-footer">
+                        <span>LIMO AI can make mistakes. Check important info.</span>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script src="models.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
